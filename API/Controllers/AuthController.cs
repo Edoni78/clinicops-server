@@ -30,18 +30,17 @@ namespace ClinicOps.API.Controllers
         }
 
         [HttpPost("register-clinic")]
-        public async Task<ActionResult<AuthResponse>> RegisterClinic([FromBody] RegisterClinicRequest req)
+        public async Task<ActionResult<AuthResponse>> RegisterClinic(
+            [FromBody] RegisterClinicRequest req)
         {
-            // 1) Prevent duplicate email
             var existing = await _userManager.FindByEmailAsync(req.Email);
-            if (existing != null) return BadRequest("Email already in use.");
+            if (existing != null)
+                return BadRequest("Email already in use.");
 
-            // 2) Create Clinic
             var clinic = new Clinic { Name = req.ClinicName };
             _db.Clinics.Add(clinic);
             await _db.SaveChangesAsync();
 
-            // 3) Create ClinicAdmin user linked to Clinic
             var user = new ApplicationUser
             {
                 UserName = req.Email,
@@ -55,40 +54,58 @@ namespace ClinicOps.API.Controllers
 
             await _userManager.AddToRoleAsync(user, "ClinicAdmin");
 
-            // 4) Issue JWT
             var roles = await _userManager.GetRolesAsync(user);
-            var (token, exp) = _jwt.CreateToken(user, roles);
-
-            return Ok(new AuthResponse { AccessToken = token, ExpiresAtUtc = exp });
-        }
-
-        [HttpPost("login")]
-        public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest req)
-        {
-            var user = await _userManager.Users
-                .Include(u => u.Clinic)
-                .FirstOrDefaultAsync(u => u.Email == req.Email);
-
-            if (user == null)
-                return Unauthorized("Invalid credentials.");
-
-            var signIn = await _signInManager.CheckPasswordSignInAsync(
-                user,
-                req.Password,
-                lockoutOnFailure: false
-            );
-
-            if (!signIn.Succeeded)
-                return Unauthorized("Invalid credentials.");
-
-            var roles = await _userManager.GetRolesAsync(user);
-
             var (token, exp) = _jwt.CreateToken(user, roles);
 
             return Ok(new AuthResponse
             {
                 AccessToken = token,
-                ExpiresAtUtc = exp
+                ExpiresAtUtc = exp,
+                User = new AuthClinicUserDto
+                {
+                    Id = user.Id,
+                    Email = user.Email!,
+                    ClinicId = clinic.Id.ToString(),
+                    ClinicName = clinic.Name
+                }
+            });
+        }
+
+        [HttpPost("login")]
+        public async Task<ActionResult<AuthResponse>> Login(
+            [FromBody] LoginRequest request)
+        {
+            var user = await _userManager.Users
+                .Include(u => u.Clinic)
+                .FirstOrDefaultAsync(u => u.Email == request.Email);
+
+            if (user == null)
+                return Unauthorized("Invalid email or password.");
+
+            var validPassword =
+                await _signInManager.CheckPasswordSignInAsync(
+                    user,
+                    request.Password,
+                    false
+                );
+
+            if (!validPassword.Succeeded)
+                return Unauthorized("Invalid email or password.");
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var (token, exp) = _jwt.CreateToken(user, roles);
+
+            return Ok(new AuthResponse
+            {
+                AccessToken = token,
+                ExpiresAtUtc = exp,
+                User = new AuthClinicUserDto
+                {
+                    Id = user.Id,
+                    Email = user.Email!,
+                    ClinicId = user.ClinicId.ToString(),
+                    ClinicName = user.Clinic.Name
+                }
             });
         }
     }

@@ -4,5 +4,6 @@
     {
         public string AccessToken { get; set; } = null!;
         public DateTime ExpiresAtUtc { get; set; }
+        public AuthClinicUserDto User { get; set; } = null!;
     }
 }
