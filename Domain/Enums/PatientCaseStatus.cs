@@ -1,4 +1,4 @@
-﻿namespace CcinicOps.Domain.Enums
+namespace ClinicOps.Domain.Enums
 {
     public enum PatientCaseStatus
     {

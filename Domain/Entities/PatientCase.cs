@@ -1,4 +1,4 @@
-﻿using CcinicOps.Domain.Enums;
+using ClinicOps.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace ClinicOps.Domain.Entities
