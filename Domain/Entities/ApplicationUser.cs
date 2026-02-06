@@ -4,7 +4,7 @@ namespace ClinicOps.Domain.Entities
 {
     public class ApplicationUser : IdentityUser
     {
-        public Guid ClinicId { get; set; }
+        public Guid? ClinicId { get; set; }
 
         public Clinic Clinic { get; set; } = null!;
 

@@ -9,7 +9,7 @@ namespace ClinicOps.Infrastructure.Data.Seed
             using var scope = sp.CreateScope();
             var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-            var roles = new[] { "ClinicAdmin", "Doctor", "Nurse", "LabTechnician", "Manager" };
+            var roles = new[] { "ClinicAdmin", "Doctor", "Nurse", "LabTechnician", "Manager", "SuperAdmin" };
 
             foreach (var r in roles)
             {

@@ -1,4 +1,5 @@
 ﻿using ClinicOps.Domain.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,67 +20,109 @@ namespace ClinicOps.Infrastructure.Data
         public DbSet<MedicalReport> MedicalReports => Set<MedicalReport>();
         public DbSet<LabResult> LabResults => Set<LabResult>();
         public DbSet<Payment> Payments => Set<Payment>();
-        
-        
+        public DbSet<ClinicApplication> ClinicApplications => Set<ClinicApplication>();
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // ==============================
+            // RELATIONSHIPS
+            // ==============================
 
             builder.Entity<ApplicationUser>()
                 .HasOne(u => u.Clinic)
                 .WithMany()
                 .HasForeignKey(u => u.ClinicId)
                 .OnDelete(DeleteBehavior.Restrict);
-            
+
             builder.Entity<Patient>()
                 .HasOne(p => p.Clinic)
                 .WithMany()
                 .HasForeignKey(p => p.ClinicId)
                 .OnDelete(DeleteBehavior.Restrict);
-            
+
             builder.Entity<PatientCase>()
                 .HasOne(pc => pc.Patient)
                 .WithMany()
                 .HasForeignKey(pc => pc.PatientId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+
             builder.Entity<PatientCase>()
                 .HasOne(pc => pc.Clinic)
                 .WithMany()
                 .HasForeignKey(pc => pc.ClinicId)
                 .OnDelete(DeleteBehavior.Restrict);
-            
+
             builder.Entity<VitalSigns>()
                 .HasOne(v => v.PatientCase)
                 .WithMany()
                 .HasForeignKey(v => v.PatientCaseId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+
             builder.Entity<MedicalReport>()
                 .HasOne(m => m.PatientCase)
                 .WithOne()
                 .HasForeignKey<MedicalReport>(m => m.PatientCaseId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+
             builder.Entity<LabResult>()
                 .HasOne(l => l.PatientCase)
                 .WithMany()
                 .HasForeignKey(l => l.PatientCaseId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+
             builder.Entity<Payment>()
                 .HasOne(p => p.PatientCase)
                 .WithOne()
                 .HasForeignKey<Payment>(p => p.PatientCaseId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
-            
+
+            // ==============================
+            // SEED SUPER ADMIN
+            // ==============================
+
+            var superAdminRoleId = "SuperAdmin";
+            var superAdminUserId = "SuperAdmin";
+
+            // ROLE
+            builder.Entity<IdentityRole>().HasData(
+                new IdentityRole
+                {
+                    Id = superAdminRoleId,
+                    Name = "SuperAdmin",
+                    NormalizedName = "SUPERADMIN"
+                }
+            );
+
+            // USER
+            var hasher = new PasswordHasher<ApplicationUser>();
+
+            var superAdminUser = new ApplicationUser
+            {
+                Id = superAdminUserId,
+                UserName = "superadmin@clinicops.local",
+                NormalizedUserName = "SUPERADMIN@CLINICOPS.LOCAL",
+                Email = "superadmin@clinicops.local",
+                NormalizedEmail = "SUPERADMIN@CLINICOPS.LOCAL",
+                EmailConfirmed = true,
+                ClinicId = null,
+                SecurityStamp = "STATIC-SECURITY-STAMP"
+            };
+
+            superAdminUser.PasswordHash =
+                hasher.HashPassword(superAdminUser, "SuperAdmin123!");
+
+            builder.Entity<ApplicationUser>().HasData(superAdminUser);
+
+            // USER ↔ ROLE
+            builder.Entity<IdentityUserRole<string>>().HasData(
+                new IdentityUserRole<string>
+                {
+                    UserId = superAdminUserId,
+                    RoleId = superAdminRoleId
+                }
+            );
         }
-        
-        
     }
-    
-    
-
-
 }

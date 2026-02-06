@@ -1,37 +1,49 @@
 ﻿using ClinicOps.API.DTOs.Auth;
-using ClinicOps.Application.Services.Auth;
 using ClinicOps.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace ClinicOps.Application.Services.Auth
 {
     public class AuthService
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IJwtTokenService _jwtTokenService;
 
         public AuthService(
             UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
             IJwtTokenService jwtTokenService)
         {
             _userManager = userManager;
+            _signInManager = signInManager;
             _jwtTokenService = jwtTokenService;
         }
 
         public async Task<AuthResponse> LoginAsync(string email, string password)
         {
-            var user = await _userManager.FindByEmailAsync(email)
-                       ?? throw new Exception("Invalid credentials");
+            var user = await _userManager.Users
+                .Include(u => u.Clinic)
+                .FirstOrDefaultAsync(u => u.Email == email);
 
-            var validPassword = await _userManager.CheckPasswordAsync(user, password);
-            if (!validPassword)
+            if (user == null)
                 throw new Exception("Invalid credentials");
 
-            // Roles NOT needed – clinic login only
-            var (token, expiresAtUtc) = _jwtTokenService.CreateToken(
+            var validPassword = await _signInManager.CheckPasswordSignInAsync(
                 user,
-                new List<string>() // empty roles
+                password,
+                lockoutOnFailure: false
             );
+
+            if (!validPassword.Succeeded)
+                throw new Exception("Invalid credentials");
+
+            var roles = await _userManager.GetRolesAsync(user);
+
+            // ✅ tuple destructuring CORRECT
+            var (token, expiresAtUtc, role) =
+                _jwtTokenService.CreateToken(user, roles);
 
             return new AuthResponse
             {
@@ -41,8 +53,9 @@ namespace ClinicOps.Application.Services.Auth
                 {
                     Id = user.Id,
                     Email = user.Email!,
-                    ClinicId = user.ClinicId.ToString(),
-                    ClinicName = user.Clinic.Name
+                    ClinicId = user.ClinicId?.ToString(),
+                    ClinicName = user.Clinic?.Name,
+                    Role = role
                 }
             };
         }

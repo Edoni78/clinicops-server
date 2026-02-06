@@ -29,48 +29,9 @@ namespace ClinicOps.API.Controllers
             _jwt = jwt;
         }
 
-        [HttpPost("register-clinic")]
-        public async Task<ActionResult<AuthResponse>> RegisterClinic(
-            [FromBody] RegisterClinicRequest req)
-        {
-            var existing = await _userManager.FindByEmailAsync(req.Email);
-            if (existing != null)
-                return BadRequest("Email already in use.");
-
-            var clinic = new Clinic { Name = req.ClinicName };
-            _db.Clinics.Add(clinic);
-            await _db.SaveChangesAsync();
-
-            var user = new ApplicationUser
-            {
-                UserName = req.Email,
-                Email = req.Email,
-                ClinicId = clinic.Id
-            };
-
-            var createRes = await _userManager.CreateAsync(user, req.Password);
-            if (!createRes.Succeeded)
-                return BadRequest(createRes.Errors.Select(e => e.Description));
-
-            await _userManager.AddToRoleAsync(user, "ClinicAdmin");
-
-            var roles = await _userManager.GetRolesAsync(user);
-            var (token, exp) = _jwt.CreateToken(user, roles);
-
-            return Ok(new AuthResponse
-            {
-                AccessToken = token,
-                ExpiresAtUtc = exp,
-                User = new AuthClinicUserDto
-                {
-                    Id = user.Id,
-                    Email = user.Email!,
-                    ClinicId = clinic.Id.ToString(),
-                    ClinicName = clinic.Name
-                }
-            });
-        }
-
+        // =====================================================
+        // LOGIN (SUPPORTS CLINIC USERS + SUPERADMIN)
+        // =====================================================
         [HttpPost("login")]
         public async Task<ActionResult<AuthResponse>> Login(
             [FromBody] LoginRequest request)
@@ -86,14 +47,16 @@ namespace ClinicOps.API.Controllers
                 await _signInManager.CheckPasswordSignInAsync(
                     user,
                     request.Password,
-                    false
+                    lockoutOnFailure: false
                 );
 
             if (!validPassword.Succeeded)
                 return Unauthorized("Invalid email or password.");
 
             var roles = await _userManager.GetRolesAsync(user);
-            var (token, exp) = _jwt.CreateToken(user, roles);
+
+            // ✅ CAPTURE ALL 3 VALUES
+            var (token, exp, role) = _jwt.CreateToken(user, roles);
 
             return Ok(new AuthResponse
             {
@@ -103,10 +66,46 @@ namespace ClinicOps.API.Controllers
                 {
                     Id = user.Id,
                     Email = user.Email!,
-                    ClinicId = user.ClinicId.ToString(),
-                    ClinicName = user.Clinic.Name
+                    ClinicId = user.ClinicId?.ToString(),
+                    ClinicName = user.Clinic?.Name,
+                    Role = role
                 }
             });
+        }
+
+        // =====================================================
+        // APPLY FOR CLINIC (NO USER CREATED)
+        // =====================================================
+        [HttpPost("apply")]
+        public async Task<IActionResult> ApplyForClinic(
+            [FromBody] RegisterClinicRequest req)
+        {
+            var existsUser = await _userManager.FindByEmailAsync(req.Email);
+            if (existsUser != null)
+                return BadRequest("Email already in use.");
+
+            var hasPending =
+                await _db.ClinicApplications.AnyAsync(a =>
+                    a.AdminEmail == req.Email &&
+                    a.Status == ApplicationStatus.Pending);
+
+            if (hasPending)
+                return BadRequest("You already have a pending application.");
+
+            var passwordHash =
+                _userManager.PasswordHasher.HashPassword(null!, req.Password);
+
+            var app = new ClinicApplication
+            {
+                ClinicName = req.ClinicName,
+                AdminEmail = req.Email,
+                AdminPasswordHash = passwordHash
+            };
+
+            _db.ClinicApplications.Add(app);
+            await _db.SaveChangesAsync();
+
+            return Ok("Application submitted successfully.");
         }
     }
 }

@@ -1,4 +1,7 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿using System;
+using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using ClinicOps.Domain.Entities;
@@ -16,7 +19,9 @@ namespace ClinicOps.Application.Services.Auth
             _config = config;
         }
 
-        public (string token, DateTime expiresAtUtc) CreateToken(ApplicationUser user, IList<string> roles)
+        public (string token, DateTime expiresAtUtc, string? role) CreateToken(
+            ApplicationUser user,
+            IList<string> roles)
         {
             var issuer = _config["Jwt:Issuer"]!;
             var audience = _config["Jwt:Audience"]!;
@@ -25,20 +30,53 @@ namespace ClinicOps.Application.Services.Auth
 
             var expiresAtUtc = DateTime.UtcNow.AddMinutes(expiresMinutes);
 
+            // ==========================
+            // BASE CLAIMS
+            // ==========================
             var claims = new List<Claim>
             {
                 new(JwtRegisteredClaimNames.Sub, user.Id),
                 new(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-                new("clinicName", user.Clinic.Name),
-                new("clinicId", user.ClinicId.ToString()),
-                new(ClaimTypes.NameIdentifier, user.Id),
+                new(ClaimTypes.NameIdentifier, user.Id)
             };
 
+            // ==========================
+            // ROLE CLAIMS
+            // ==========================
             foreach (var r in roles)
+            {
                 claims.Add(new Claim(ClaimTypes.Role, r));
+            }
 
-            var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
-            var creds = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
+            // 👉 Primary role (frontend-friendly)
+            var primaryRole = roles.FirstOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(primaryRole))
+            {
+                claims.Add(new Claim("primaryRole", primaryRole));
+            }
+
+            // ==========================
+            // TENANT CLAIMS (CLINIC USERS)
+            // ==========================
+            if (user.ClinicId.HasValue)
+            {
+                claims.Add(new Claim("clinicId", user.ClinicId.Value.ToString()));
+
+                if (user.Clinic != null)
+                {
+                    claims.Add(new Claim("clinicName", user.Clinic.Name));
+                }
+            }
+
+            // ==========================
+            // TOKEN CREATION
+            // ==========================
+            var signingKey =
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
+
+            var creds =
+                new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
                 issuer: issuer,
@@ -48,7 +86,11 @@ namespace ClinicOps.Application.Services.Auth
                 signingCredentials: creds
             );
 
-            return (new JwtSecurityTokenHandler().WriteToken(token), expiresAtUtc);
+            return (
+                new JwtSecurityTokenHandler().WriteToken(token),
+                expiresAtUtc,
+                primaryRole
+            );
         }
     }
 }
