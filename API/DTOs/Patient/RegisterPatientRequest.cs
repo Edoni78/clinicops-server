@@ -23,5 +23,8 @@ namespace ClinicOps.API.DTOs.Patient
 
         [MaxLength(500, ErrorMessage = "Notes cannot exceed 500 characters")]
         public string? Notes { get; set; }
+
+        // Optional clinicId for SuperAdmin testing
+        public Guid? ClinicId { get; set; }
     }
 }

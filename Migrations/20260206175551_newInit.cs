@@ -447,7 +447,12 @@ namespace clinicops.Migrations
             migrationBuilder.InsertData(
                 table: "AspNetUsers",
                 columns: new[] { "Id", "AccessFailedCount", "ClinicId", "ConcurrencyStamp", "CreatedAt", "Email", "EmailConfirmed", "IsActive", "LockoutEnabled", "LockoutEnd", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "SecurityStamp", "TwoFactorEnabled", "UserName" },
-                values: new object[] { "SuperAdmin", 0, null, "da40b9eb-3571-4272-b255-25cf1031f2e7", new DateTime(2026, 1, 27, 19, 11, 17, 979, DateTimeKind.Utc).AddTicks(1794), "superadmin@clinicops.local", true, true, false, null, "SUPERADMIN@CLINICOPS.LOCAL", "SUPERADMIN@CLINICOPS.LOCAL", "AQAAAAIAAYagAAAAELHP2AopxofnhwJ3uXTVw5EbRGQoOY4fP5KANoBIyHwpOM22K3ROPlq4n/46h0XZ9w==", null, false, "STATIC-SECURITY-STAMP", false, "superadmin@clinicops.local" });
+                values: new object[] { "SuperAdmin", 0, null, "af0bec78-1d86-4e4a-b209-ee99d2a23a0b", new DateTime(2026, 2, 6, 17, 55, 51, 516, DateTimeKind.Utc).AddTicks(9808), "superadmin@clinicops.local", true, true, false, null, "SUPERADMIN@CLINICOPS.LOCAL", "SUPERADMIN@CLINICOPS.LOCAL", "AQAAAAIAAYagAAAAEH1BpAtltAnloR6xereKaVxQzNKibL1kN6t95VQc7HK0Lpye/MNOOn8U7rS/TUxUJw==", null, false, "STATIC-SECURITY-STAMP", false, "superadmin@clinicops.local" });
+
+            migrationBuilder.InsertData(
+                table: "Clinics",
+                columns: new[] { "Id", "Address", "CreatedAt", "IsActive", "Name", "Phone" },
+                values: new object[] { new Guid("11111111-1111-1111-1111-111111111111"), "123 Test Street", new DateTime(2026, 2, 6, 17, 55, 51, 552, DateTimeKind.Utc).AddTicks(1617), true, "Default Test Clinic", "+1234567890" });
 
             migrationBuilder.InsertData(
                 table: "AspNetUserRoles",

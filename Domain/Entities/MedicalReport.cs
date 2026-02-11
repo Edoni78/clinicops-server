@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace ClinicOps.Domain.Entities
 {
@@ -21,6 +21,8 @@ namespace ClinicOps.Domain.Entities
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public Guid DoctorId { get; set; } 
+        public Guid DoctorId { get; set; }
+        /// <summary>ASP.NET Identity user id of the doctor. Add migration to create this column.</summary>
+        public string? DoctorUserId { get; set; }
     }
 }

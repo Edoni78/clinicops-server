@@ -3,6 +3,7 @@ using System;
 using ClinicOps.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace clinicops.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260211140138_AddDoctorUserIdToMedicalReport")]
+    partial class AddDoctorUserIdToMedicalReport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -98,15 +101,15 @@ namespace clinicops.Migrations
                         {
                             Id = "SuperAdmin",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "cfd4207b-f54a-4ed7-ae44-1201a1e763ba",
-                            CreatedAt = new DateTime(2026, 2, 11, 15, 24, 47, 909, DateTimeKind.Utc).AddTicks(5045),
+                            ConcurrencyStamp = "50a01053-8e5c-40bb-8546-ea753660009a",
+                            CreatedAt = new DateTime(2026, 2, 11, 14, 1, 38, 296, DateTimeKind.Utc).AddTicks(6776),
                             Email = "superadmin@clinicops.local",
                             EmailConfirmed = true,
                             IsActive = true,
                             LockoutEnabled = false,
                             NormalizedEmail = "SUPERADMIN@CLINICOPS.LOCAL",
                             NormalizedUserName = "SUPERADMIN@CLINICOPS.LOCAL",
-                            PasswordHash = "AQAAAAIAAYagAAAAEPK4wKDvwuIHFh8lNmsa76/r8IcdZOdTXjU00+JdUgbMTmlAzqNsCamyn9enDiFeew==",
+                            PasswordHash = "AQAAAAIAAYagAAAAENBpgpz29ZW+AllrNjnR8658AeuMjnWzYhi5RtBHlslWctVu/JaGN3Sgm7k9bbX+hg==",
                             PhoneNumberConfirmed = false,
                             SecurityStamp = "STATIC-SECURITY-STAMP",
                             TwoFactorEnabled = false,
@@ -148,7 +151,7 @@ namespace clinicops.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             Address = "123 Test Street",
-                            CreatedAt = new DateTime(2026, 2, 11, 15, 24, 47, 944, DateTimeKind.Utc).AddTicks(85),
+                            CreatedAt = new DateTime(2026, 2, 11, 14, 1, 38, 334, DateTimeKind.Utc).AddTicks(4673),
                             IsActive = true,
                             Name = "Default Test Clinic",
                             Phone = "+1234567890"

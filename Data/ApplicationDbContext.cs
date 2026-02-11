@@ -1,4 +1,4 @@
-﻿using ClinicOps.Domain.Entities;
+using ClinicOps.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -121,6 +121,23 @@ namespace ClinicOps.Infrastructure.Data
                 {
                     UserId = superAdminUserId,
                     RoleId = superAdminRoleId
+                }
+            );
+
+            // ==============================
+            // SEED DEFAULT CLINIC FOR SUPERADMIN TESTING
+            // ==============================
+            var defaultClinicId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            
+            builder.Entity<Clinic>().HasData(
+                new Clinic
+                {
+                    Id = defaultClinicId,
+                    Name = "Default Test Clinic",
+                    Address = "123 Test Street",
+                    Phone = "+1234567890",
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true
                 }
             );
         }
