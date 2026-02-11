@@ -98,15 +98,15 @@ namespace clinicops.Migrations
                         {
                             Id = "SuperAdmin",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "cfd4207b-f54a-4ed7-ae44-1201a1e763ba",
-                            CreatedAt = new DateTime(2026, 2, 11, 15, 24, 47, 909, DateTimeKind.Utc).AddTicks(5045),
+                            ConcurrencyStamp = "ec3fce85-96bb-4a78-b0f6-fd536b2242cc",
+                            CreatedAt = new DateTime(2026, 2, 11, 21, 7, 15, 921, DateTimeKind.Utc).AddTicks(4625),
                             Email = "superadmin@clinicops.local",
                             EmailConfirmed = true,
                             IsActive = true,
                             LockoutEnabled = false,
                             NormalizedEmail = "SUPERADMIN@CLINICOPS.LOCAL",
                             NormalizedUserName = "SUPERADMIN@CLINICOPS.LOCAL",
-                            PasswordHash = "AQAAAAIAAYagAAAAEPK4wKDvwuIHFh8lNmsa76/r8IcdZOdTXjU00+JdUgbMTmlAzqNsCamyn9enDiFeew==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEIp8wM9yEnFthXnD+/EKpSPTa1ERqPTnNqm/9eAqZ5KB5vQawqG0Md4a/U4c3SP68A==",
                             PhoneNumberConfirmed = false,
                             SecurityStamp = "STATIC-SECURITY-STAMP",
                             TwoFactorEnabled = false,
@@ -148,7 +148,7 @@ namespace clinicops.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             Address = "123 Test Street",
-                            CreatedAt = new DateTime(2026, 2, 11, 15, 24, 47, 944, DateTimeKind.Utc).AddTicks(85),
+                            CreatedAt = new DateTime(2026, 2, 11, 21, 7, 15, 959, DateTimeKind.Utc).AddTicks(2319),
                             IsActive = true,
                             Name = "Default Test Clinic",
                             Phone = "+1234567890"

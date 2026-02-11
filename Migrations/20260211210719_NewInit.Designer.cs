@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace clinicops.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260206175551_newInit")]
-    partial class newInit
+    [Migration("20260211210719_NewInit")]
+    partial class NewInit
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -101,15 +101,15 @@ namespace clinicops.Migrations
                         {
                             Id = "SuperAdmin",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "af0bec78-1d86-4e4a-b209-ee99d2a23a0b",
-                            CreatedAt = new DateTime(2026, 2, 6, 17, 55, 51, 516, DateTimeKind.Utc).AddTicks(9808),
+                            ConcurrencyStamp = "ec3fce85-96bb-4a78-b0f6-fd536b2242cc",
+                            CreatedAt = new DateTime(2026, 2, 11, 21, 7, 15, 921, DateTimeKind.Utc).AddTicks(4625),
                             Email = "superadmin@clinicops.local",
                             EmailConfirmed = true,
                             IsActive = true,
                             LockoutEnabled = false,
                             NormalizedEmail = "SUPERADMIN@CLINICOPS.LOCAL",
                             NormalizedUserName = "SUPERADMIN@CLINICOPS.LOCAL",
-                            PasswordHash = "AQAAAAIAAYagAAAAEH1BpAtltAnloR6xereKaVxQzNKibL1kN6t95VQc7HK0Lpye/MNOOn8U7rS/TUxUJw==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEIp8wM9yEnFthXnD+/EKpSPTa1ERqPTnNqm/9eAqZ5KB5vQawqG0Md4a/U4c3SP68A==",
                             PhoneNumberConfirmed = false,
                             SecurityStamp = "STATIC-SECURITY-STAMP",
                             TwoFactorEnabled = false,
@@ -151,7 +151,7 @@ namespace clinicops.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             Address = "123 Test Street",
-                            CreatedAt = new DateTime(2026, 2, 6, 17, 55, 51, 552, DateTimeKind.Utc).AddTicks(1617),
+                            CreatedAt = new DateTime(2026, 2, 11, 21, 7, 15, 959, DateTimeKind.Utc).AddTicks(2319),
                             IsActive = true,
                             Name = "Default Test Clinic",
                             Phone = "+1234567890"
@@ -253,6 +253,9 @@ namespace clinicops.Migrations
 
                     b.Property<Guid>("DoctorId")
                         .HasColumnType("char(36)");
+
+                    b.Property<string>("DoctorUserId")
+                        .HasColumnType("longtext");
 
                     b.Property<Guid>("PatientCaseId")
                         .HasColumnType("char(36)");
