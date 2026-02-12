@@ -114,3 +114,4 @@ C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\ref
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\clinicops.pdb
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\clinicops.genruntimeconfig.cache
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\ref\clinicops.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\clinicops.staticwebassets.runtime.json

@@ -70,64 +70,92 @@ All authenticated endpoints require header:
 
 ---
 
-## 4. Patients (clinic-scoped)
+## 4. Clinic profile / card (after clinic login)
 
-### 4.1 Register patient (reception)
+**Require:** `Authorization: Bearer <clinic_user_token>` (any role with `clinicId` in token; SuperAdmin cannot use these – no clinicId).
+
+Used for the clinic’s own dashboard: show and edit the clinic “card” (name, logo, address, phone, description).
+
+### 4.1 Get clinic profile
+- **GET** `/api/Clinic/profile`  
+- **Response:** `ClinicProfileDto`: `id`, `name`, `address`, `phone`, `logoUrl`, `description`, `createdAt`, `isActive`  
+- **Note:** Returns the clinic of the logged-in user. If user has no clinic (e.g. SuperAdmin), returns 400.
+
+### 4.2 Update clinic profile
+- **PUT** `/api/Clinic/profile`  
+- **Body:** `UpdateClinicProfileRequest` – all optional: `name`, `address`, `phone`, `logoUrl`, `description`  
+- **Response:** Updated `ClinicProfileDto`  
+- **Note:** Only the logged-in clinic is updated. Send only fields you want to change (or all). Omitted fields are left unchanged.
+
+### 4.3 Upload clinic logo
+- **POST** `/api/Clinic/profile/logo`  
+- **Content-Type:** `multipart/form-data`  
+- **Body:** one file field (e.g. `file`) – image: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`  
+- **Response:** Updated `ClinicProfileDto` with new `logoUrl` (e.g. `/uploads/clinics/{clinicId}/logo.png`)  
+- **Serving:** Logo is served by the API: `GET {baseUrl}/uploads/clinics/{clinicId}/logo.{ext}` (static files from `wwwroot`).
+
+**Backend migration:** Add columns `LogoUrl` (string, max 500) and `Description` (string, max 2000) to the `Clinics` table if not present (`dotnet ef migrations add AddClinicProfileFields` then `dotnet ef database update`).
+
+---
+
+## 5. Patients (clinic-scoped)
+
+### 5.1 Register patient (reception)
 - **POST** `/api/Patient/register`  
 - **Body:** `{ "firstName", "lastName", "dateOfBirth", "gender?", "phone?", "notes?", "clinicId?" }`  
   - `clinicId` only for SuperAdmin (optional; default clinic used if omitted).  
 - **Response:** Patient + `patientCaseId`, `patientCaseStatus` (e.g. Waiting).
 
-### 4.2 List patients
+### 5.2 List patients
 - **GET** `/api/Patient`  
 - **Query (SuperAdmin only):** `clinicId` (optional)  
 - **Response:** Array of patient DTOs with `patientCaseId`, `patientCaseStatus`.
 
 ---
 
-## 5. Patient cases (nurse / doctor flow)
+## 6. Patient cases (nurse / doctor flow)
 
-### 5.1 List patient cases
+### 6.1 List patient cases
 - **GET** `/api/PatientCase`  
 - **Query:** `status` (optional): `Waiting` | `InProgress` | `InConsultation` | `Completed` | `Finished`  
 - **Response:** Array of `{ id, patientId, patientFirstName, patientLastName, status, createdAt }`
 
-### 5.2 Get case detail (nurse form / doctor panel)
+### 6.2 Get case detail (nurse form / doctor panel)
 - **GET** `/api/PatientCase/{id}`  
 - **Response:**  
   - Case + patient: `patientFirstName`, `patientLastName`, `patientDateOfBirth`, `patientPhone`, `patientGender`, `status`, `notes`, `createdAt`, `completedAt`  
   - `latestVitals`: `weightKg`, `systolicPressure`, `diastolicPressure`, `temperatureC`, `heartRate`, `recordedAt`  
   - `medicalReport`: `diagnosis`, `therapy`, `createdAt`, `doctorId`
 
-### 5.3 Nurse – Submit vitals
+### 6.3 Nurse – Submit vitals
 - **POST** `/api/PatientCase/{id}/vitals`  
 - **Body:** `{ "weightKg?", "systolicPressure?", "diastolicPressure?", "temperatureC?", "heartRate?" }`  
 - **Response:** Saved vitals DTO.  
 - **SignalR:** Event `VitalsUpdated(patientCaseId, vitalsDto)` is sent to the clinic group so the doctor panel can update in real time.
 
-### 5.4 Doctor – Submit diagnosis/therapy
+### 6.4 Doctor – Submit diagnosis/therapy
 - **POST** `/api/PatientCase/{id}/report`  
 - **Body:** `{ "diagnosis": "string", "therapy": "string" }`  
 - **Response:** Medical report DTO.  
 - **SignalR:** Event `ReportUpdated(patientCaseId, reportDto)` is sent to the clinic group.
 
-### 5.5 Update case status
+### 6.5 Update case status
 - **PATCH** `/api/PatientCase/{id}/status?status=InConsultation`  
 - **Query:** `status`: `Waiting` | `InProgress` | `InConsultation` | `Completed` | `Finished`  
 - **SignalR:** Event `CaseStatusChanged(patientCaseId, status)` is sent to the clinic group.
 
 ---
 
-## 6. SignalR (real-time)
+## 7. SignalR (real-time)
 
 - **Endpoint:** `/hubs/clinic`  
 - **Auth:** Pass JWT via query: `?access_token=<token>` or via `Authorization: Bearer <token>` (if supported by your client).
 
-### 6.1 Client → Server
+### 7.1 Client → Server
 - **JoinClinic(clinicId)** – Join group `clinic_{clinicId}` to receive all events for that clinic.  
 - **JoinPatientCase(patientCaseId)** – Optional; join `case_{patientCaseId}` for a single case.
 
-### 6.2 Server → Client
+### 7.2 Server → Client
 - **VitalsUpdated(patientCaseId, vitalsDto)** – When nurse saves vitals.  
 - **ReportUpdated(patientCaseId, reportDto)** – When doctor saves report.  
 - **CaseStatusChanged(patientCaseId, status)** – When case status is updated.
@@ -136,7 +164,7 @@ Use these to refresh the doctor panel (and nurse view if needed) in real time.
 
 ---
 
-## 7. Role summary
+## 8. Role summary
 
 | Role           | Typical use                          |
 |----------------|--------------------------------------|
