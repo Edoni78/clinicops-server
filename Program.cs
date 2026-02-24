@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Text;
 using ClinicOps.Application.Services.Auth;
 using ClinicOps.Application.Services.Patient;
+using ClinicOps.Application.Services.Pdf;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -28,6 +29,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IPatientService, PatientService>();
+builder.Services.AddScoped<ICaseReportPdfService, CaseReportPdfService>();
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()

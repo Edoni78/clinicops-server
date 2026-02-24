@@ -7,6 +7,21 @@ All authenticated endpoints require header:
 
 ---
 
+## API që e merr raportin PDF të rastit (dhe profilin e mjekut)
+
+| Çfarë merr | Metoda | API |
+|------------|--------|-----|
+| **Raporti PDF i rastit** (me nënshkrim dhe vulë mjeku) | GET | `/api/PatientCase/{id}/pdf` |
+| **Profili i mjekut** (emri, nënshkrimi, vula) | GET | `/api/DoctorProfile/profile` |
+| Ndrysho emrin e mjekut | PUT | `/api/DoctorProfile/profile` (body: `{ "displayName": "..." }`) |
+| Ngarko nënshkrim (imazh) | POST | `/api/DoctorProfile/profile/signature` (multipart, `file`) |
+| Ngarko vulë (imazh) | POST | `/api/DoctorProfile/profile/stamp` (multipart, `file`) |
+
+- Për PDF: `id` = Guid i rastit (PatientCase). Përgjigjja është skedar PDF (`application/pdf`).
+- Për DoctorProfile: vetëm përdorues me rol **Doctor**; header `Authorization: Bearer <token>`.
+
+---
+
 ## 1. Authentication
 
 ### 1.1 Login (any role)
@@ -98,6 +113,40 @@ Used for the clinic’s own dashboard: show and edit the clinic “card” (name
 
 ---
 
+## 4.5 Doctor profile (Doctor role only)
+
+**Require:** `Authorization: Bearer <doctor_token>` and user must be in role **Doctor**.
+
+Used so the logged-in doctor can set their display name, signature image, and stamp image (e.g. for reports and “signed by” in the UI).
+
+### 4.5.1 Get doctor profile
+- **GET** `/api/DoctorProfile/profile`  
+- **Response:** `DoctorProfileDto`: `userId`, `email`, `displayName`, `signatureUrl`, `stampUrl`  
+- **Note:** `displayName` is the doctor’s chosen name (e.g. "Dr. John Smith"); if not set, the API returns `email` as the display value.
+
+### 4.5.2 Update doctor display name
+- **PUT** `/api/DoctorProfile/profile`  
+- **Body:** `{ "displayName": "string" }` (optional, max 200)  
+- **Response:** Updated `DoctorProfileDto`
+
+### 4.5.3 Upload signature image
+- **POST** `/api/DoctorProfile/profile/signature`  
+- **Content-Type:** `multipart/form-data`  
+- **Body:** one file field (e.g. `file`) – image: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`  
+- **Response:** Updated `DoctorProfileDto` with new `signatureUrl` (e.g. `/uploads/doctors/{userId}/signature.png`)
+
+### 4.5.4 Upload stamp image
+- **POST** `/api/DoctorProfile/profile/stamp`  
+- **Content-Type:** `multipart/form-data`  
+- **Body:** one file field (e.g. `file`) – image: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`  
+- **Response:** Updated `DoctorProfileDto` with new `stampUrl` (e.g. `/uploads/doctors/{userId}/stamp.png`)
+
+**Serving:** Images are under `wwwroot`: `GET {baseUrl}/uploads/doctors/{userId}/signature.{ext}` and `stamp.{ext}`.
+
+**Frontend:** After login, if `user.role === 'Doctor'`, call `GET /api/DoctorProfile/profile` to show the current doctor’s name and optional signature/stamp in the header or report views. Use the profile page to update display name and upload signature/stamp.
+
+---
+
 ## 5. Patients (clinic-scoped)
 
 ### 5.1 Register patient (reception)
@@ -125,7 +174,7 @@ Used for the clinic’s own dashboard: show and edit the clinic “card” (name
 - **Response:**  
   - Case + patient: `patientFirstName`, `patientLastName`, `patientDateOfBirth`, `patientPhone`, `patientGender`, `status`, `notes`, `createdAt`, `completedAt`  
   - `latestVitals`: `weightKg`, `systolicPressure`, `diastolicPressure`, `temperatureC`, `heartRate`, `recordedAt`  
-  - `medicalReport`: `diagnosis`, `therapy`, `createdAt`, `doctorId`
+  - `medicalReport`: `anamneza`, `diagnosis`, `therapy`, `createdAt`, `doctorId`
 
 ### 6.3 Nurse – Submit vitals
 - **POST** `/api/PatientCase/{id}/vitals`  
@@ -133,16 +182,21 @@ Used for the clinic’s own dashboard: show and edit the clinic “card” (name
 - **Response:** Saved vitals DTO.  
 - **SignalR:** Event `VitalsUpdated(patientCaseId, vitalsDto)` is sent to the clinic group so the doctor panel can update in real time.
 
-### 6.4 Doctor – Submit diagnosis/therapy
+### 6.4 Doctor – Submit anamneza, diagnosis and therapy
 - **POST** `/api/PatientCase/{id}/report`  
-- **Body:** `{ "diagnosis": "string", "therapy": "string" }`  
-- **Response:** Medical report DTO.  
+- **Body:** `{ "anamneza?": "string", "diagnosis": "string", "therapy": "string" }` – `anamneza` (anamnesis / patient history) is optional.  
+- **Response:** Medical report DTO (`anamneza`, `diagnosis`, `therapy`, `createdAt`, `doctorId`, etc.).  
 - **SignalR:** Event `ReportUpdated(patientCaseId, reportDto)` is sent to the clinic group.
 
 ### 6.5 Update case status
 - **PATCH** `/api/PatientCase/{id}/status?status=InConsultation`  
 - **Query:** `status`: `Waiting` | `InProgress` | `InConsultation` | `Completed` | `Finished`  
 - **SignalR:** Event `CaseStatusChanged(patientCaseId, status)` is sent to the clinic group.
+
+### 6.6 Download case report as PDF
+- **GET** `/api/PatientCase/{id}/pdf`  
+- **Response:** PDF file (`application/pdf`) with patient case report (patient info, vitals, anamneza, diagnosis, therapy). File name: `CaseReport_{LastName}_{FirstName}_{caseId}.pdf`.  
+- **Implementation:** HTML template rendered to PDF via PuppeteerSharp (Chromium).
 
 ---
 

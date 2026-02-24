@@ -12,6 +12,10 @@ namespace ClinicOps.Domain.Entities
         public Guid PatientCaseId { get; set; }
         public PatientCase PatientCase { get; set; } = null!;
 
+        /// <summary>Anamnesis (patient history / anamneza).</summary>
+        [MaxLength(2000)]
+        public string? Anamneza { get; set; }
+
         [Required]
         [MaxLength(500)]
         public string Diagnosis { get; set; } = null!;

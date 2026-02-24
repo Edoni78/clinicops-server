@@ -2,10 +2,12 @@ using ClinicOps.API.DTOs.MedicalReport;
 using ClinicOps.API.DTOs.PatientCase;
 using ClinicOps.API.DTOs.Vitals;
 using ClinicOps.API.Hubs;
+using ClinicOps.Application.Services.Pdf;
 using ClinicOps.Domain.Entities;
 using ClinicOps.Domain.Enums;
 using ClinicOps.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -19,11 +21,15 @@ namespace ClinicOps.API.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly IHubContext<ClinicHub> _hubContext;
+        private readonly ICaseReportPdfService _pdfService;
+        private readonly IWebHostEnvironment _env;
 
-        public PatientCaseController(ApplicationDbContext db, IHubContext<ClinicHub> hubContext)
+        public PatientCaseController(ApplicationDbContext db, IHubContext<ClinicHub> hubContext, ICaseReportPdfService pdfService, IWebHostEnvironment env)
         {
             _db = db;
             _hubContext = hubContext;
+            _pdfService = pdfService;
+            _env = env;
         }
 
         /// <summary>
@@ -109,6 +115,7 @@ namespace ClinicOps.API.Controllers
                 MedicalReport = report == null ? null : new MedicalReportSummaryDto
                 {
                     Id = report.Id,
+                    Anamneza = report.Anamneza,
                     Diagnosis = report.Diagnosis,
                     Therapy = report.Therapy,
                     CreatedAt = report.CreatedAt,
@@ -196,6 +203,7 @@ namespace ClinicOps.API.Controllers
             MedicalReport report;
             if (existing != null)
             {
+                existing.Anamneza = request.Anamneza;
                 existing.Diagnosis = request.Diagnosis;
                 existing.Therapy = request.Therapy;
                 existing.DoctorUserId = userId;
@@ -207,6 +215,7 @@ namespace ClinicOps.API.Controllers
                 {
                     ClinicId = clinicId,
                     PatientCaseId = id,
+                    Anamneza = request.Anamneza,
                     Diagnosis = request.Diagnosis,
                     Therapy = request.Therapy,
                     DoctorId = Guid.Empty,
@@ -220,6 +229,7 @@ namespace ClinicOps.API.Controllers
             {
                 Id = report.Id,
                 PatientCaseId = id,
+                Anamneza = report.Anamneza,
                 Diagnosis = report.Diagnosis,
                 Therapy = report.Therapy,
                 CreatedAt = report.CreatedAt,
@@ -268,6 +278,91 @@ namespace ClinicOps.API.Controllers
             return Ok(new { id, status = statusEnum.ToString() });
         }
 
+        /// <summary>
+        /// Generate and download PDF report for the patient case (HTML to PDF via PuppeteerSharp).
+        /// API: GET /api/PatientCase/{id}/pdf  (Authorization: Bearer token)
+        /// </summary>
+        [HttpGet("{id:guid}/pdf")]
+        [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DownloadCaseReportPdf(Guid id)
+        {
+            var (_, clinicId) = await ResolveClinicIdAsync();
+            var @case = await _db.PatientCases
+                .Include(pc => pc.Patient)
+                .Include(pc => pc.Clinic)
+                .FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
+
+            if (@case == null)
+                return NotFound("Patient case not found.");
+
+            var latestVitals = await _db.VitalSigns
+                .Where(v => v.PatientCaseId == id)
+                .OrderByDescending(v => v.RecordedAt)
+                .FirstOrDefaultAsync();
+            var report = await _db.MedicalReports.FirstOrDefaultAsync(m => m.PatientCaseId == id);
+
+            string? doctorDisplayName = null;
+            string? signatureUrl = null;
+            string? stampUrl = null;
+            string? signatureDataUri = null;
+            string? stampDataUri = null;
+            if (report != null && !string.IsNullOrEmpty(report.DoctorUserId))
+            {
+                var doctorUser = await _db.Users.AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Id == report.DoctorUserId);
+                if (doctorUser != null)
+                {
+                    doctorDisplayName = doctorUser.DoctorDisplayName ?? doctorUser.Email;
+                    signatureUrl = doctorUser.SignatureUrl;
+                    stampUrl = doctorUser.StampUrl;
+                    signatureDataUri = TryReadFileAsDataUri(_env, signatureUrl);
+                    stampDataUri = TryReadFileAsDataUri(_env, stampUrl);
+                }
+            }
+
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+            var model = new PatientCaseReportModel
+            {
+                ClinicName = @case.Clinic?.Name ?? "",
+                PatientFirstName = @case.Patient.FirstName,
+                PatientLastName = @case.Patient.LastName,
+                PatientDateOfBirth = @case.Patient.DateOfBirth,
+                PatientGender = @case.Patient.Gender,
+                PatientPhone = @case.Patient.Phone,
+                Status = @case.Status.ToString(),
+                CreatedAt = @case.CreatedAt,
+                Notes = @case.Notes,
+                LatestVitals = latestVitals == null ? null : new VitalsModel
+                {
+                    WeightKg = latestVitals.WeightKg,
+                    SystolicPressure = latestVitals.SystolicPressure,
+                    DiastolicPressure = latestVitals.DiastolicPressure,
+                    TemperatureC = latestVitals.TemperatureC,
+                    HeartRate = latestVitals.HeartRate,
+                    RecordedAt = latestVitals.RecordedAt
+                },
+                MedicalReport = report == null ? null : new MedicalReportModel
+                {
+                    Anamneza = report.Anamneza,
+                    Diagnosis = report.Diagnosis,
+                    Therapy = report.Therapy,
+                    CreatedAt = report.CreatedAt
+                },
+                BaseUrl = baseUrl,
+                DoctorDisplayName = doctorDisplayName,
+                SignatureUrl = signatureUrl,
+                StampUrl = stampUrl,
+                SignatureDataUri = signatureDataUri,
+                StampDataUri = stampDataUri
+            };
+
+            var pdfBytes = await _pdfService.GenerateCaseReportPdfAsync(model);
+            var fileName = $"CaseReport_{@case.Patient.LastName}_{@case.Patient.FirstName}_{id:N}.pdf";
+            return File(pdfBytes, "application/pdf", fileName);
+        }
+
         private async Task<(bool isSuperAdmin, Guid clinicId)> ResolveClinicIdAsync()
         {
             var clinicIdClaim = User.FindFirst("clinicId")?.Value;
@@ -292,6 +387,34 @@ namespace ClinicOps.API.Controllers
                 await _db.SaveChangesAsync();
             }
             return (true, defaultId);
+        }
+
+        private static string? TryReadFileAsDataUri(IWebHostEnvironment env, string? relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath)) return null;
+            var root = env.WebRootPath ?? env.ContentRootPath;
+            if (string.IsNullOrEmpty(root)) return null;
+            var path = System.IO.Path.Combine(root, relativePath.TrimStart('/', '\\'));
+            if (!System.IO.File.Exists(path)) return null;
+            try
+            {
+                var bytes = System.IO.File.ReadAllBytes(path);
+                var base64 = Convert.ToBase64String(bytes);
+                var ext = System.IO.Path.GetExtension(path).ToLowerInvariant();
+                var mime = ext switch
+                {
+                    ".jpg" or ".jpeg" => "image/jpeg",
+                    ".png" => "image/png",
+                    ".gif" => "image/gif",
+                    ".webp" => "image/webp",
+                    _ => "image/png"
+                };
+                return $"data:{mime};base64,{base64}";
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

@@ -5,6 +5,22 @@
       "PackagePath": "staticwebassets\\.gitkeep"
     },
     {
+      "Id": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\wwwroot\\uploads\\clinics\\3d52c024-c620-400a-a225-f530ef707c78\\logo.jpg",
+      "PackagePath": "staticwebassets\\uploads\\clinics\\3d52c024-c620-400a-a225-f530ef707c78\\logo.jpg"
+    },
+    {
+      "Id": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\wwwroot\\uploads\\clinics\\3d52c024-c620-400a-a225-f530ef707c78\\logo.png",
+      "PackagePath": "staticwebassets\\uploads\\clinics\\3d52c024-c620-400a-a225-f530ef707c78\\logo.png"
+    },
+    {
+      "Id": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\wwwroot\\uploads\\doctors\\374feb37-3d02-498d-ab2f-e00feaf0f129\\signature.png",
+      "PackagePath": "staticwebassets\\uploads\\doctors\\374feb37-3d02-498d-ab2f-e00feaf0f129\\signature.png"
+    },
+    {
+      "Id": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\wwwroot\\uploads\\doctors\\374feb37-3d02-498d-ab2f-e00feaf0f129\\stamp.png",
+      "PackagePath": "staticwebassets\\uploads\\doctors\\374feb37-3d02-498d-ab2f-e00feaf0f129\\stamp.png"
+    },
+    {
       "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.build.clinicops.props",
       "PackagePath": "build\\clinicops.props"
     },

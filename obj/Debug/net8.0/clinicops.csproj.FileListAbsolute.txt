@@ -115,3 +115,16 @@ C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\cli
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\clinicops.genruntimeconfig.cache
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\ref\clinicops.dll
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\clinicops.staticwebassets.runtime.json
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\Microsoft.Extensions.Logging.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\Microsoft.Extensions.Primitives.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\PuppeteerSharp.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\System.Diagnostics.DiagnosticSource.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\System.IO.Pipelines.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\System.Text.Encodings.Web.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\System.Text.Json.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\WebDriverBiDi.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\runtimes\browser\lib\net8.0\System.Text.Encodings.Web.dll
