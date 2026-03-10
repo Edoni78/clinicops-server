@@ -73,6 +73,10 @@
               "target": "Package",
               "version": "[8.0.0, )"
             },
+            "PdfSharpCore": {
+              "target": "Package",
+              "version": "[1.3.67, )"
+            },
             "Pomelo.EntityFrameworkCore.MySql": {
               "target": "Package",
               "version": "[8.0.0, )"

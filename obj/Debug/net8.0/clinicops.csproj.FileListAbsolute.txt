@@ -128,3 +128,8 @@ C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\Sys
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\System.Text.Json.dll
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\WebDriverBiDi.dll
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\runtimes\browser\lib\net8.0\System.Text.Encodings.Web.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\PdfSharpCore.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\ICSharpCode.SharpZipLib.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\SixLabors.Fonts.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\SixLabors.ImageSharp.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\de\PdfSharpCore.resources.dll

@@ -21,6 +21,7 @@ namespace ClinicOps.Infrastructure.Data
         public DbSet<LabResult> LabResults => Set<LabResult>();
         public DbSet<Payment> Payments => Set<Payment>();
         public DbSet<ClinicApplication> ClinicApplications => Set<ClinicApplication>();
+        public DbSet<Service> Services => Set<Service>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -77,6 +78,12 @@ namespace ClinicOps.Infrastructure.Data
                 .WithOne()
                 .HasForeignKey<Payment>(p => p.PatientCaseId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Service>()
+                .HasOne(s => s.Clinic)
+                .WithMany()
+                .HasForeignKey(s => s.ClinicId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // ==============================
             // SEED SUPER ADMIN

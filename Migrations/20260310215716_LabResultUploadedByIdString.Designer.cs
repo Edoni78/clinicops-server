@@ -3,6 +3,7 @@ using System;
 using ClinicOps.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace clinicops.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260310215716_LabResultUploadedByIdString")]
+    partial class LabResultUploadedByIdString
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -107,15 +110,15 @@ namespace clinicops.Migrations
                         {
                             Id = "SuperAdmin",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "77534497-8aa6-47ea-b6a3-230468ca5a00",
-                            CreatedAt = new DateTime(2026, 3, 10, 22, 20, 14, 643, DateTimeKind.Utc).AddTicks(3303),
+                            ConcurrencyStamp = "a8a1be47-db70-4628-bef1-9fb8e964818a",
+                            CreatedAt = new DateTime(2026, 3, 10, 21, 57, 15, 524, DateTimeKind.Utc).AddTicks(4886),
                             Email = "superadmin@clinicops.local",
                             EmailConfirmed = true,
                             IsActive = true,
                             LockoutEnabled = false,
                             NormalizedEmail = "SUPERADMIN@CLINICOPS.LOCAL",
                             NormalizedUserName = "SUPERADMIN@CLINICOPS.LOCAL",
-                            PasswordHash = "AQAAAAIAAYagAAAAEHCHKhZDijyAv1lSnqtHv4jGmcpAIrIKUmknmkDym7P/x8k1gBGTF3OoT734TpM1OQ==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEFeun/eObFGscantl21k6PPyRdGz39BqrKpf8g8r/mihHvyUVUhPTz5WVpy5bD0tag==",
                             PhoneNumberConfirmed = false,
                             SecurityStamp = "STATIC-SECURITY-STAMP",
                             TwoFactorEnabled = false,
@@ -165,7 +168,7 @@ namespace clinicops.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             Address = "123 Test Street",
-                            CreatedAt = new DateTime(2026, 3, 10, 22, 20, 14, 682, DateTimeKind.Utc).AddTicks(7859),
+                            CreatedAt = new DateTime(2026, 3, 10, 21, 57, 15, 577, DateTimeKind.Utc).AddTicks(597),
                             IsActive = true,
                             Name = "Default Test Clinic",
                             Phone = "+1234567890"
@@ -403,36 +406,6 @@ namespace clinicops.Migrations
                         .IsUnique();
 
                     b.ToTable("Payments");
-                });
-
-            modelBuilder.Entity("ClinicOps.Domain.Entities.Service", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("ClinicId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("varchar(300)");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(65,30)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClinicId");
-
-                    b.ToTable("Services");
                 });
 
             modelBuilder.Entity("ClinicOps.Domain.Entities.VitalSigns", b =>
@@ -712,17 +685,6 @@ namespace clinicops.Migrations
                     b.Navigation("Clinic");
 
                     b.Navigation("PatientCase");
-                });
-
-            modelBuilder.Entity("ClinicOps.Domain.Entities.Service", b =>
-                {
-                    b.HasOne("ClinicOps.Domain.Entities.Clinic", "Clinic")
-                        .WithMany()
-                        .HasForeignKey("ClinicId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Clinic");
                 });
 
             modelBuilder.Entity("ClinicOps.Domain.Entities.VitalSigns", b =>

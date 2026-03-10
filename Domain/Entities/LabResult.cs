@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace ClinicOps.Domain.Entities
 {
@@ -25,6 +25,7 @@ namespace ClinicOps.Domain.Entities
 
         public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
 
-        public Guid UploadedById { get; set; } // LabTechnician (ApplicationUser.Id)
+        [MaxLength(450)]
+        public string? UploadedById { get; set; } // ApplicationUser.Id (any role can upload)
     }
 }

@@ -1,3 +1,4 @@
+using ClinicOps.API.DTOs.LabResult;
 using ClinicOps.API.DTOs.MedicalReport;
 using ClinicOps.API.DTOs.PatientCase;
 using ClinicOps.API.DTOs.Vitals;
@@ -11,6 +12,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using PdfSharpCore.Pdf;
+using PdfSharpCore.Pdf.IO;
+using System.Security.Claims;
 
 namespace ClinicOps.API.Controllers
 {
@@ -359,8 +363,154 @@ namespace ClinicOps.API.Controllers
             };
 
             var pdfBytes = await _pdfService.GenerateCaseReportPdfAsync(model);
+
+            // If the case has lab result PDFs, append them as additional pages (first page = report, then labs)
+            var labResults = await _db.LabResults
+                .Where(l => l.PatientCaseId == id)
+                .OrderBy(l => l.UploadedAt)
+                .ToListAsync();
+            if (labResults.Count > 0)
+            {
+                pdfBytes = MergeReportWithLabPdfs(pdfBytes, labResults);
+            }
+
             var fileName = $"CaseReport_{@case.Patient.LastName}_{@case.Patient.FirstName}_{id:N}.pdf";
             return File(pdfBytes, "application/pdf", fileName);
+        }
+
+        /// <summary>
+        /// List lab result PDFs for a patient case. Any authenticated user with access to the case can list.
+        /// </summary>
+        [HttpGet("{id:guid}/labresults")]
+        [ProducesResponseType(typeof(List<LabResultDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<List<LabResultDto>>> ListLabResults(Guid id)
+        {
+            var (_, clinicId) = await ResolveClinicIdAsync();
+            var @case = await _db.PatientCases.FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
+            if (@case == null)
+                return NotFound("Patient case not found.");
+
+            var list = await _db.LabResults
+                .Where(l => l.PatientCaseId == id)
+                .OrderBy(l => l.UploadedAt)
+                .Select(l => new LabResultDto
+                {
+                    Id = l.Id,
+                    PatientCaseId = l.PatientCaseId,
+                    FileName = l.FileName,
+                    DownloadUrl = $"/api/PatientCase/{id}/labresults/{l.Id}/file",
+                    ContentType = l.ContentType,
+                    UploadedAt = l.UploadedAt,
+                    UploadedById = l.UploadedById
+                })
+                .ToListAsync();
+            return Ok(list);
+        }
+
+        /// <summary>
+        /// Upload a lab result PDF for a patient case. Any authenticated user with access to the case can upload.
+        /// </summary>
+        [HttpPost("{id:guid}/labresults")]
+        [ProducesResponseType(typeof(LabResultDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<LabResultDto>> UploadLabResult(Guid id, IFormFile? file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("No file provided.");
+            var contentType = file.ContentType ?? "";
+            if (!contentType.Contains("pdf", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(Path.GetExtension(file.FileName), ".pdf", StringComparison.OrdinalIgnoreCase))
+                return BadRequest("Only PDF files are allowed for lab results.");
+
+            var (_, clinicId) = await ResolveClinicIdAsync();
+            var @case = await _db.PatientCases.FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
+            if (@case == null)
+                return NotFound("Patient case not found.");
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var labId = Guid.NewGuid();
+            var relativePath = Path.Combine("LabUploads", id.ToString("N"), labId.ToString("N") + ".pdf").Replace('\\', '/');
+
+            var labResult = new LabResult
+            {
+                Id = labId,
+                ClinicId = clinicId,
+                PatientCaseId = id,
+                FileName = Path.GetFileName(file.FileName) ?? $"lab_{labId:N}.pdf",
+                FilePath = relativePath,
+                ContentType = "application/pdf",
+                UploadedAt = DateTime.UtcNow,
+                UploadedById = userId
+            };
+            _db.LabResults.Add(labResult);
+
+            var fullPath = Path.Combine(_env.ContentRootPath ?? "", relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+            await using (var stream = new FileStream(fullPath, FileMode.Create))
+                await file.CopyToAsync(stream);
+
+            await _db.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(ListLabResults), new { id }, new LabResultDto
+            {
+                Id = labResult.Id,
+                PatientCaseId = labResult.PatientCaseId,
+                FileName = labResult.FileName,
+                DownloadUrl = $"/api/PatientCase/{id}/labresults/{labResult.Id}/file",
+                ContentType = labResult.ContentType,
+                UploadedAt = labResult.UploadedAt,
+                UploadedById = labResult.UploadedById
+            });
+        }
+
+        /// <summary>
+        /// Download a single lab result PDF file. Authorized if user has access to the patient case.
+        /// </summary>
+        [HttpGet("{id:guid}/labresults/{labId:guid}/file")]
+        [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DownloadLabResultFile(Guid id, Guid labId)
+        {
+            var (_, clinicId) = await ResolveClinicIdAsync();
+            var lab = await _db.LabResults.FirstOrDefaultAsync(l =>
+                l.Id == labId && l.PatientCaseId == id && l.ClinicId == clinicId);
+            if (lab == null)
+                return NotFound("Lab result not found.");
+
+            var fullPath = Path.Combine(_env.ContentRootPath ?? "", lab.FilePath.Replace('/', Path.DirectorySeparatorChar));
+            if (!System.IO.File.Exists(fullPath))
+                return NotFound("Lab result file not found on disk.");
+
+            var bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
+            return File(bytes, lab.ContentType ?? "application/pdf", lab.FileName);
+        }
+
+        private byte[] MergeReportWithLabPdfs(byte[] reportPdfBytes, List<LabResult> labResults)
+        {
+            using var outputDoc = new PdfDocument();
+            using (var reportStream = new MemoryStream(reportPdfBytes))
+            using (var reportDoc = PdfReader.Open(reportStream, PdfDocumentOpenMode.Import))
+            {
+                for (int i = 0; i < reportDoc.PageCount; i++)
+                    outputDoc.AddPage(reportDoc.Pages[i]);
+            }
+            var contentRoot = _env.ContentRootPath ?? "";
+            foreach (var lab in labResults)
+            {
+                var fullPath = Path.Combine(contentRoot, lab.FilePath.Replace('/', Path.DirectorySeparatorChar));
+                if (!System.IO.File.Exists(fullPath)) continue;
+                using (var labStream = System.IO.File.OpenRead(fullPath))
+                using (var labDoc = PdfReader.Open(labStream, PdfDocumentOpenMode.Import))
+                {
+                    for (int i = 0; i < labDoc.PageCount; i++)
+                        outputDoc.AddPage(labDoc.Pages[i]);
+                }
+            }
+            using var ms = new MemoryStream();
+            outputDoc.Save(ms, false);
+            return ms.ToArray();
         }
 
         private async Task<(bool isSuperAdmin, Guid clinicId)> ResolveClinicIdAsync()
