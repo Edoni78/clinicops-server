@@ -42,6 +42,7 @@ namespace ClinicOps.API.Controllers
                     ClinicName = a.ClinicName,
                     AdminEmail = a.AdminEmail,
                     Status = a.Status,
+                    ClinicMode = a.ClinicMode,
                     CreatedAtUtc = a.CreatedAtUtc,
                     ReviewedAtUtc = a.ReviewedAtUtc,
                     ReviewNote = a.ReviewNote
@@ -74,6 +75,7 @@ namespace ClinicOps.API.Controllers
             var clinic = new Clinic
             {
                 Name = app.ClinicName,
+                ClinicMode = app.ClinicMode,
                 CreatedAt = DateTime.UtcNow,
                 IsActive = true
             };

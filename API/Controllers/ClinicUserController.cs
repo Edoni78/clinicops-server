@@ -1,5 +1,6 @@
 using ClinicOps.API.DTOs.ClinicUser;
 using ClinicOps.Domain.Entities;
+using ClinicOps.Domain.Enums;
 using ClinicOps.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -87,6 +88,13 @@ namespace ClinicOps.API.Controllers
             var clinic = await _db.Clinics.FindAsync(resolvedClinicId.Value);
             if (clinic == null)
                 return BadRequest("Clinic not found.");
+
+            if (clinic.ClinicMode == ClinicMode.SoloDoctor &&
+                (role.Equals("Nurse", StringComparison.OrdinalIgnoreCase) ||
+                 role.Equals("LabTechnician", StringComparison.OrdinalIgnoreCase)))
+            {
+                return BadRequest("This clinic mode does not include nurse or laboratory staff workflow.");
+            }
 
             var user = new ApplicationUser
             {

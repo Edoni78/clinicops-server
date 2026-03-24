@@ -1,6 +1,7 @@
-﻿using ClinicOps.API.DTOs.Auth;
+using ClinicOps.API.DTOs.Auth;
 using ClinicOps.Application.Services.Auth;
 using ClinicOps.Domain.Entities;
+using ClinicOps.Domain.Enums;
 using ClinicOps.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -80,6 +81,9 @@ namespace ClinicOps.API.Controllers
         public async Task<IActionResult> ApplyForClinic(
             [FromBody] RegisterClinicRequest req)
         {
+            if (!Enum.IsDefined(typeof(ClinicMode), req.ClinicMode))
+                return BadRequest("clinicMode is required and must be either SoloDoctor or FullTeam.");
+
             var existsUser = await _userManager.FindByEmailAsync(req.Email);
             if (existsUser != null)
                 return BadRequest("Email already in use.");
@@ -99,7 +103,8 @@ namespace ClinicOps.API.Controllers
             {
                 ClinicName = req.ClinicName,
                 AdminEmail = req.Email,
-                AdminPasswordHash = passwordHash
+                AdminPasswordHash = passwordHash,
+                ClinicMode = req.ClinicMode
             };
 
             _db.ClinicApplications.Add(app);

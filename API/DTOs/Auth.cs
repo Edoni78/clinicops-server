@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
+using ClinicOps.Domain.Enums;
 
 namespace ClinicOps.API.DTOs.Auth
 {
@@ -12,5 +13,9 @@ namespace ClinicOps.API.DTOs.Auth
 
         [Required, MinLength(6)]
         public string Password { get; set; } = null!;
+
+        [Required]
+        [EnumDataType(typeof(ClinicMode))]
+        public ClinicMode ClinicMode { get; set; }
     }
 }

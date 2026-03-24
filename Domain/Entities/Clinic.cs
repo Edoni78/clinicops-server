@@ -1,3 +1,4 @@
+using ClinicOps.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace ClinicOps.Domain.Entities
@@ -27,5 +28,7 @@ namespace ClinicOps.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public bool IsActive { get; set; } = true;
+
+        public ClinicMode ClinicMode { get; set; } = ClinicMode.FullTeam;
     }
 }

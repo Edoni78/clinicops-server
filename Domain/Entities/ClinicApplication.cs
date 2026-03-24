@@ -1,4 +1,6 @@
-﻿namespace ClinicOps.Domain.Entities
+using ClinicOps.Domain.Enums;
+
+namespace ClinicOps.Domain.Entities
 {
     public class ClinicApplication
     {
@@ -14,6 +16,7 @@
         public DateTime? ReviewedAtUtc { get; set; }
 
         public string? ReviewNote { get; set; }
+        public ClinicMode ClinicMode { get; set; } = ClinicMode.FullTeam;
     }
 
     public enum ApplicationStatus

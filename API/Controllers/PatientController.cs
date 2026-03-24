@@ -1,6 +1,7 @@
 using ClinicOps.API.DTOs.Patient;
 using ClinicOps.Application.Services.Patient;
 using ClinicOps.Domain.Entities;
+using ClinicOps.Domain.Enums;
 using ClinicOps.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -68,6 +69,7 @@ namespace ClinicOps.API.Controllers
                             Name = "Default Test Clinic",
                             Address = "123 Test Street",
                             Phone = "+1234567890",
+                            ClinicMode = ClinicMode.FullTeam,
                             CreatedAt = DateTime.UtcNow,
                             IsActive = true
                         };

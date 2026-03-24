@@ -1,4 +1,5 @@
 using ClinicOps.Domain.Entities;
+using ClinicOps.Domain.Enums;
 
 namespace ClinicOps.API.DTOs.ClinicApplication
 {
@@ -12,6 +13,7 @@ namespace ClinicOps.API.DTOs.ClinicApplication
         public DateTime CreatedAtUtc { get; set; }
         public DateTime? ReviewedAtUtc { get; set; }
         public string? ReviewNote { get; set; }
+        public ClinicMode ClinicMode { get; set; }
     }
 
     public class ApproveRejectRequest

@@ -1,4 +1,5 @@
 using ClinicOps.Domain.Entities;
+using ClinicOps.Domain.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -143,6 +144,7 @@ namespace ClinicOps.Infrastructure.Data
                     Name = "Default Test Clinic",
                     Address = "123 Test Street",
                     Phone = "+1234567890",
+                    ClinicMode = ClinicMode.FullTeam,
                     CreatedAt = DateTime.UtcNow,
                     IsActive = true
                 }

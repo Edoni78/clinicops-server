@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using ClinicOps.Domain.Entities;
+using ClinicOps.Domain.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
@@ -66,6 +67,12 @@ namespace ClinicOps.Application.Services.Auth
                 if (user.Clinic != null)
                 {
                     claims.Add(new Claim("clinicName", user.Clinic.Name));
+                    claims.Add(new Claim("clinicMode", user.Clinic.ClinicMode.ToString()));
+                }
+                else
+                {
+                    // Safe fallback when clinic relation is not loaded.
+                    claims.Add(new Claim("clinicMode", ClinicMode.FullTeam.ToString()));
                 }
             }
 

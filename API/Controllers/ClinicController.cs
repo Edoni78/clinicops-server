@@ -46,6 +46,7 @@ namespace ClinicOps.API.Controllers
                 Phone = clinic.Phone,
                 LogoUrl = clinic.LogoUrl,
                 Description = clinic.Description,
+                ClinicMode = clinic.ClinicMode,
                 CreatedAt = clinic.CreatedAt,
                 IsActive = clinic.IsActive
             });
@@ -85,6 +86,7 @@ namespace ClinicOps.API.Controllers
                 Phone = clinic.Phone,
                 LogoUrl = clinic.LogoUrl,
                 Description = clinic.Description,
+                ClinicMode = clinic.ClinicMode,
                 CreatedAt = clinic.CreatedAt,
                 IsActive = clinic.IsActive
             });
@@ -134,6 +136,7 @@ namespace ClinicOps.API.Controllers
                 Phone = clinic.Phone,
                 LogoUrl = clinic.LogoUrl,
                 Description = clinic.Description,
+                ClinicMode = clinic.ClinicMode,
                 CreatedAt = clinic.CreatedAt,
                 IsActive = clinic.IsActive
             });

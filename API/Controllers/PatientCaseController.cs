@@ -138,6 +138,8 @@ namespace ClinicOps.API.Controllers
         public async Task<ActionResult<VitalSignsDto>> SubmitVitals(Guid id, [FromBody] SubmitVitalSignsRequest request)
         {
             var (_, clinicId) = await ResolveClinicIdAsync();
+            if (await IsSoloDoctorClinicAsync(clinicId))
+                return BadRequest("This clinic mode does not include nurse workflow.");
             var @case = await _db.PatientCases
                 .Include(pc => pc.Patient)
                 .FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
@@ -292,6 +294,7 @@ namespace ClinicOps.API.Controllers
         public async Task<IActionResult> DownloadCaseReportPdf(Guid id)
         {
             var (_, clinicId) = await ResolveClinicIdAsync();
+            var isSoloDoctor = await IsSoloDoctorClinicAsync(clinicId);
             var @case = await _db.PatientCases
                 .Include(pc => pc.Patient)
                 .Include(pc => pc.Clinic)
@@ -369,7 +372,7 @@ namespace ClinicOps.API.Controllers
                 .Where(l => l.PatientCaseId == id)
                 .OrderBy(l => l.UploadedAt)
                 .ToListAsync();
-            if (labResults.Count > 0)
+            if (!isSoloDoctor && labResults.Count > 0)
             {
                 pdfBytes = MergeReportWithLabPdfs(pdfBytes, labResults);
             }
@@ -387,6 +390,8 @@ namespace ClinicOps.API.Controllers
         public async Task<ActionResult<List<LabResultDto>>> ListLabResults(Guid id)
         {
             var (_, clinicId) = await ResolveClinicIdAsync();
+            if (await IsSoloDoctorClinicAsync(clinicId))
+                return BadRequest("This clinic mode does not include laboratory workflow.");
             var @case = await _db.PatientCases.FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
             if (@case == null)
                 return NotFound("Patient case not found.");
@@ -425,6 +430,8 @@ namespace ClinicOps.API.Controllers
                 return BadRequest("Only PDF files are allowed for lab results.");
 
             var (_, clinicId) = await ResolveClinicIdAsync();
+            if (await IsSoloDoctorClinicAsync(clinicId))
+                return BadRequest("This clinic mode does not include laboratory workflow.");
             var @case = await _db.PatientCases.FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
             if (@case == null)
                 return NotFound("Patient case not found.");
@@ -474,6 +481,8 @@ namespace ClinicOps.API.Controllers
         public async Task<IActionResult> DownloadLabResultFile(Guid id, Guid labId)
         {
             var (_, clinicId) = await ResolveClinicIdAsync();
+            if (await IsSoloDoctorClinicAsync(clinicId))
+                return BadRequest("This clinic mode does not include laboratory workflow.");
             var lab = await _db.LabResults.FirstOrDefaultAsync(l =>
                 l.Id == labId && l.PatientCaseId == id && l.ClinicId == clinicId);
             if (lab == null)
@@ -530,6 +539,7 @@ namespace ClinicOps.API.Controllers
                     Name = "Default Test Clinic",
                     Address = "123 Test Street",
                     Phone = "+1234567890",
+                    ClinicMode = ClinicMode.FullTeam,
                     CreatedAt = DateTime.UtcNow,
                     IsActive = true
                 };
@@ -537,6 +547,15 @@ namespace ClinicOps.API.Controllers
                 await _db.SaveChangesAsync();
             }
             return (true, defaultId);
+        }
+
+        private async Task<bool> IsSoloDoctorClinicAsync(Guid clinicId)
+        {
+            var mode = await _db.Clinics
+                .Where(c => c.Id == clinicId)
+                .Select(c => c.ClinicMode)
+                .FirstOrDefaultAsync();
+            return mode == ClinicMode.SoloDoctor;
         }
 
         private static string? TryReadFileAsDataUri(IWebHostEnvironment env, string? relativePath)
