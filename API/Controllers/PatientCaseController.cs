@@ -333,6 +333,9 @@ namespace ClinicOps.API.Controllers
             var model = new PatientCaseReportModel
             {
                 ClinicName = @case.Clinic?.Name ?? "",
+                ClinicAddress = @case.Clinic?.Address,
+                ClinicPhone = @case.Clinic?.Phone,
+                ClinicLogoUrl = @case.Clinic?.LogoUrl,
                 PatientFirstName = @case.Patient.FirstName,
                 PatientLastName = @case.Patient.LastName,
                 PatientDateOfBirth = @case.Patient.DateOfBirth,

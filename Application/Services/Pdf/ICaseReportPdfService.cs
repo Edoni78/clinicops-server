@@ -8,6 +8,10 @@ namespace ClinicOps.Application.Services.Pdf
     public class PatientCaseReportModel
     {
         public string ClinicName { get; set; } = "";
+        public string? ClinicAddress { get; set; }
+        public string? ClinicPhone { get; set; }
+        /// <summary>Relative URL of clinic logo image (e.g. /uploads/clinics/{clinicId}/logo.png).</summary>
+        public string? ClinicLogoUrl { get; set; }
         public string PatientFirstName { get; set; } = null!;
         public string PatientLastName { get; set; } = null!;
         public DateTime? PatientDateOfBirth { get; set; }

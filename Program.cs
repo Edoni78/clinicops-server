@@ -84,6 +84,8 @@ builder.Services.AddAuthentication(options =>
         };
     });
 
+
+
 builder.Services.AddSignalR();
 
 builder.Services.AddAuthorization();
@@ -117,6 +119,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+    }
+});
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
