@@ -21,5 +21,9 @@ namespace ClinicOps.Domain.Entities
 
         [MaxLength(500)]
         public string? Notes { get; set; }
+
+        /// <summary>Optional clinic service selected by the doctor for billing (same clinic as the case).</summary>
+        public Guid? ServiceId { get; set; }
+        public Service? Service { get; set; }
     }
 }

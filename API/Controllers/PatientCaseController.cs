@@ -60,7 +60,10 @@ namespace ClinicOps.API.Controllers
                     PatientFirstName = pc.Patient.FirstName,
                     PatientLastName = pc.Patient.LastName,
                     Status = pc.Status.ToString(),
-                    CreatedAt = pc.CreatedAt
+                    CreatedAt = pc.CreatedAt,
+                    ServiceId = pc.ServiceId,
+                    ServiceName = pc.Service != null ? pc.Service.Name : null,
+                    ServicePrice = pc.Service != null ? pc.Service.Price : null
                 })
                 .ToListAsync();
 
@@ -79,6 +82,7 @@ namespace ClinicOps.API.Controllers
             var @case = await _db.PatientCases
                 .Include(pc => pc.Patient)
                 .Include(pc => pc.Clinic)
+                .Include(pc => pc.Service)
                 .FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
 
             if (@case == null)
@@ -106,6 +110,9 @@ namespace ClinicOps.API.Controllers
                 CreatedAt = @case.CreatedAt,
                 CompletedAt = @case.CompletedAt,
                 Notes = @case.Notes,
+                ServiceId = @case.ServiceId,
+                ServiceName = @case.Service?.Name,
+                ServicePrice = @case.Service?.Price,
                 LatestVitals = latestVitals == null ? null : new VitalSignsSummaryDto
                 {
                     Id = latestVitals.Id,
@@ -282,6 +289,43 @@ namespace ClinicOps.API.Controllers
                 .SendAsync("CaseStatusChanged", id, statusEnum.ToString());
 
             return Ok(new { id, status = statusEnum.ToString() });
+        }
+
+        /// <summary>
+        /// Attach an existing clinic service to this case (doctor selects service; nurse sees name/price on case list).
+        /// Accepts <c>serviceId</c> as query param and/or JSON body <c>{ "serviceId": "guid" }</c>.
+        /// </summary>
+        [HttpPatch("{id:guid}/service")]
+        [HttpPost("{id:guid}/service")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> AttachService(Guid id, [FromQuery] Guid? serviceId, [FromBody] AttachServiceToCaseRequest? body)
+        {
+            var resolved = serviceId ?? body?.ServiceId;
+            if (resolved == null || resolved == Guid.Empty)
+                return BadRequest("serviceId is required (query string or JSON body).");
+
+            var (_, clinicId) = await ResolveClinicIdAsync();
+            var @case = await _db.PatientCases.FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
+            if (@case == null)
+                return NotFound("Patient case not found.");
+
+            var service = await _db.Services.FirstOrDefaultAsync(s =>
+                s.Id == resolved.Value && s.ClinicId == clinicId && s.IsActive);
+            if (service == null)
+                return BadRequest("Service not found, inactive, or not in this clinic.");
+
+            @case.ServiceId = service.Id;
+            await _db.SaveChangesAsync();
+
+            return Ok(new
+            {
+                id,
+                serviceId = service.Id,
+                serviceName = service.Name,
+                servicePrice = service.Price
+            });
         }
 
         /// <summary>

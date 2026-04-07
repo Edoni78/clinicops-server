@@ -56,6 +56,12 @@ namespace ClinicOps.Infrastructure.Data
                 .HasForeignKey(pc => pc.ClinicId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            builder.Entity<PatientCase>()
+                .HasOne(pc => pc.Service)
+                .WithMany()
+                .HasForeignKey(pc => pc.ServiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             builder.Entity<VitalSigns>()
                 .HasOne(v => v.PatientCase)
                 .WithMany()
