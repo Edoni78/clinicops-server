@@ -23,6 +23,9 @@ namespace ClinicOps.Infrastructure.Data
         public DbSet<Payment> Payments => Set<Payment>();
         public DbSet<ClinicApplication> ClinicApplications => Set<ClinicApplication>();
         public DbSet<Service> Services => Set<Service>();
+        public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+        public DbSet<PatientConsent> PatientConsents => Set<PatientConsent>();
+        public DbSet<PatientPrivacyState> PatientPrivacyStates => Set<PatientPrivacyState>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -85,6 +88,22 @@ namespace ClinicOps.Infrastructure.Data
                 .WithOne()
                 .HasForeignKey<Payment>(p => p.PatientCaseId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<PatientConsent>()
+                .HasOne(c => c.Patient)
+                .WithMany()
+                .HasForeignKey(c => c.PatientId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<PatientPrivacyState>()
+                .HasOne(ps => ps.Patient)
+                .WithOne()
+                .HasForeignKey<PatientPrivacyState>(ps => ps.PatientId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<PatientPrivacyState>()
+                .HasIndex(ps => ps.PatientId)
+                .IsUnique();
 
             builder.Entity<Service>()
                 .HasOne(s => s.Clinic)

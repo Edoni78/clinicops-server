@@ -3,6 +3,7 @@ using ClinicOps.API.DTOs.MedicalReport;
 using ClinicOps.API.DTOs.PatientCase;
 using ClinicOps.API.DTOs.Vitals;
 using ClinicOps.API.Hubs;
+using ClinicOps.Application.Services.Gdpr;
 using ClinicOps.Application.Services.Pdf;
 using ClinicOps.Domain.Entities;
 using ClinicOps.Domain.Enums;
@@ -27,13 +28,15 @@ namespace ClinicOps.API.Controllers
         private readonly IHubContext<ClinicHub> _hubContext;
         private readonly ICaseReportPdfService _pdfService;
         private readonly IWebHostEnvironment _env;
+        private readonly IAuditLogService _auditLogService;
 
-        public PatientCaseController(ApplicationDbContext db, IHubContext<ClinicHub> hubContext, ICaseReportPdfService pdfService, IWebHostEnvironment env)
+        public PatientCaseController(ApplicationDbContext db, IHubContext<ClinicHub> hubContext, ICaseReportPdfService pdfService, IWebHostEnvironment env, IAuditLogService auditLogService)
         {
             _db = db;
             _hubContext = hubContext;
             _pdfService = pdfService;
             _env = env;
+            _auditLogService = auditLogService;
         }
 
         /// <summary>
@@ -97,6 +100,9 @@ namespace ClinicOps.API.Controllers
 
             var report = await _db.MedicalReports
                 .FirstOrDefaultAsync(m => m.PatientCaseId == id);
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
+            await _auditLogService.TryLogAsync("MedicalRecordViewed", "PatientCase", id.ToString(), clinicId, userId);
 
             return Ok(new PatientCaseDetailDto
             {
@@ -240,6 +246,7 @@ namespace ClinicOps.API.Controllers
                 _db.MedicalReports.Add(report);
             }
             await _db.SaveChangesAsync();
+            await _auditLogService.TryLogAsync("MedicalRecordUpdated", "MedicalReport", report.Id.ToString(), clinicId, userId);
 
             var dto = new MedicalReportDto
             {
@@ -284,6 +291,9 @@ namespace ClinicOps.API.Controllers
             if (report == null)
                 return NotFound("Medical report not found.");
 
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
+            await _auditLogService.TryLogAsync("MedicalRecordViewed", "MedicalReport", report.Id.ToString(), clinicId, userId);
+
             return Ok(new MedicalReportDto
             {
                 Id = report.Id,
@@ -317,6 +327,8 @@ namespace ClinicOps.API.Controllers
 
             _db.MedicalReports.Remove(report);
             await _db.SaveChangesAsync();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
+            await _auditLogService.TryLogAsync("PatientDeleted", "MedicalReport", report.Id.ToString(), clinicId, userId);
 
             await _hubContext.Clients
                 .Group(ClinicHub.GroupPrefix + clinicId)
@@ -361,6 +373,8 @@ namespace ClinicOps.API.Controllers
 
             _db.PatientCases.Remove(@case);
             await _db.SaveChangesAsync();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
+            await _auditLogService.TryLogAsync("PatientDeleted", "PatientCase", id.ToString(), @case.ClinicId, userId);
 
             await _hubContext.Clients
                 .Group(ClinicHub.GroupPrefix + @case.ClinicId)
@@ -682,6 +696,8 @@ namespace ClinicOps.API.Controllers
                 return NotFound("Lab result file not found on disk.");
 
             var bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
+            await _auditLogService.TryLogAsync("MedicalRecordViewed", "LabResultFile", labId.ToString(), clinicId, userId);
             return File(bytes, lab.ContentType ?? "application/pdf", lab.FileName);
         }
 

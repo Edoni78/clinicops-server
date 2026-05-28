@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace clinicops.Migrations
 {
     /// <inheritdoc />
-    public partial class NewInit : Migration
+    public partial class NewInitAuditLogs : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -31,6 +31,32 @@ namespace clinicops.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetRoles", x => x.Id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "AuditLogs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ClinicId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    UserId = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Action = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    EntityName = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    EntityId = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IpAddress = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    UserAgent = table.Column<string>(type: "varchar(1000)", maxLength: 1000, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AuditLogs", x => x.Id);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -316,6 +342,58 @@ namespace clinicops.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "PatientConsents",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    PatientId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ClinicId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    HasGivenConsent = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    ConsentType = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    WithdrawnAtUtc = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                    GivenByUserId = table.Column<string>(type: "varchar(450)", maxLength: 450, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Notes = table.Column<string>(type: "varchar(2000)", maxLength: 2000, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PatientConsents", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PatientConsents_Patients_PatientId",
+                        column: x => x.PatientId,
+                        principalTable: "Patients",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "PatientPrivacyStates",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    PatientId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    IsDeleted = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    IsAnonymized = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    DeletedAtUtc = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                    AnonymizedAtUtc = table.Column<DateTime>(type: "datetime(6)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PatientPrivacyStates", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PatientPrivacyStates_Patients_PatientId",
+                        column: x => x.PatientId,
+                        principalTable: "Patients",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "PatientCases",
                 columns: table => new
                 {
@@ -495,12 +573,12 @@ namespace clinicops.Migrations
             migrationBuilder.InsertData(
                 table: "AspNetUsers",
                 columns: new[] { "Id", "AccessFailedCount", "ClinicId", "ConcurrencyStamp", "CreatedAt", "DoctorDisplayName", "Email", "EmailConfirmed", "IsActive", "LockoutEnabled", "LockoutEnd", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "SecurityStamp", "SignatureUrl", "StampUrl", "TwoFactorEnabled", "UserName" },
-                values: new object[] { "SuperAdmin", 0, null, "a8be5ed3-0a4c-416a-8361-5d887ee1a1cc", new DateTime(2026, 5, 25, 14, 23, 16, 554, DateTimeKind.Utc).AddTicks(3152), null, "superadmin@clinicops.local", true, true, false, null, "SUPERADMIN@CLINICOPS.LOCAL", "SUPERADMIN@CLINICOPS.LOCAL", "AQAAAAIAAYagAAAAENSAN+oYvU96wuFF4pwf7quX1y0dx+GgomZl1g66INF/WRp0yyReaQaX/a9FovTD8A==", null, false, "STATIC-SECURITY-STAMP", null, null, false, "superadmin@clinicops.local" });
+                values: new object[] { "SuperAdmin", 0, null, "1e5575e8-35d9-42ee-a003-3d8b7acb1bc7", new DateTime(2026, 5, 28, 10, 36, 47, 905, DateTimeKind.Utc).AddTicks(1482), null, "superadmin@clinicops.local", true, true, false, null, "SUPERADMIN@CLINICOPS.LOCAL", "SUPERADMIN@CLINICOPS.LOCAL", "AQAAAAIAAYagAAAAEEBWnBTJi5exVlnL2XFlpqtilQ7a/SZ9/xXsmfPNWrQkbvMnbp9of3f2yJswgWBMtw==", null, false, "STATIC-SECURITY-STAMP", null, null, false, "superadmin@clinicops.local" });
 
             migrationBuilder.InsertData(
                 table: "Clinics",
                 columns: new[] { "Id", "Address", "ClinicMode", "CreatedAt", "Description", "IsActive", "LogoUrl", "Name", "Phone" },
-                values: new object[] { new Guid("11111111-1111-1111-1111-111111111111"), "123 Test Street", 1, new DateTime(2026, 5, 25, 14, 23, 16, 589, DateTimeKind.Utc).AddTicks(1626), null, true, null, "Default Test Clinic", "+1234567890" });
+                values: new object[] { new Guid("11111111-1111-1111-1111-111111111111"), "123 Test Street", 1, new DateTime(2026, 5, 28, 10, 36, 47, 940, DateTimeKind.Utc).AddTicks(3195), null, true, null, "Default Test Clinic", "+1234567890" });
 
             migrationBuilder.InsertData(
                 table: "AspNetUserRoles",
@@ -586,6 +664,17 @@ namespace clinicops.Migrations
                 column: "ServiceId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PatientConsents_PatientId",
+                table: "PatientConsents",
+                column: "PatientId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PatientPrivacyStates_PatientId",
+                table: "PatientPrivacyStates",
+                column: "PatientId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Patients_ClinicId",
                 table: "Patients",
                 column: "ClinicId");
@@ -636,6 +725,9 @@ namespace clinicops.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "AuditLogs");
+
+            migrationBuilder.DropTable(
                 name: "ClinicApplications");
 
             migrationBuilder.DropTable(
@@ -643,6 +735,12 @@ namespace clinicops.Migrations
 
             migrationBuilder.DropTable(
                 name: "MedicalReports");
+
+            migrationBuilder.DropTable(
+                name: "PatientConsents");
+
+            migrationBuilder.DropTable(
+                name: "PatientPrivacyStates");
 
             migrationBuilder.DropTable(
                 name: "Payments");

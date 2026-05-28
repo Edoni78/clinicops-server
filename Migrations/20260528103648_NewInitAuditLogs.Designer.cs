@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace clinicops.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260525142316_NewInit")]
-    partial class NewInit
+    [Migration("20260528103648_NewInitAuditLogs")]
+    partial class NewInitAuditLogs
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -110,20 +110,62 @@ namespace clinicops.Migrations
                         {
                             Id = "SuperAdmin",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "a8be5ed3-0a4c-416a-8361-5d887ee1a1cc",
-                            CreatedAt = new DateTime(2026, 5, 25, 14, 23, 16, 554, DateTimeKind.Utc).AddTicks(3152),
+                            ConcurrencyStamp = "1e5575e8-35d9-42ee-a003-3d8b7acb1bc7",
+                            CreatedAt = new DateTime(2026, 5, 28, 10, 36, 47, 905, DateTimeKind.Utc).AddTicks(1482),
                             Email = "superadmin@clinicops.local",
                             EmailConfirmed = true,
                             IsActive = true,
                             LockoutEnabled = false,
                             NormalizedEmail = "SUPERADMIN@CLINICOPS.LOCAL",
                             NormalizedUserName = "SUPERADMIN@CLINICOPS.LOCAL",
-                            PasswordHash = "AQAAAAIAAYagAAAAENSAN+oYvU96wuFF4pwf7quX1y0dx+GgomZl1g66INF/WRp0yyReaQaX/a9FovTD8A==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEEBWnBTJi5exVlnL2XFlpqtilQ7a/SZ9/xXsmfPNWrQkbvMnbp9of3f2yJswgWBMtw==",
                             PhoneNumberConfirmed = false,
                             SecurityStamp = "STATIC-SECURITY-STAMP",
                             TwoFactorEnabled = false,
                             UserName = "superadmin@clinicops.local"
                         });
+                });
+
+            modelBuilder.Entity("ClinicOps.Domain.Entities.AuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<Guid?>("ClinicId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("EntityId")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("EntityName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AuditLogs");
                 });
 
             modelBuilder.Entity("ClinicOps.Domain.Entities.Clinic", b =>
@@ -172,7 +214,7 @@ namespace clinicops.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             Address = "123 Test Street",
                             ClinicMode = 1,
-                            CreatedAt = new DateTime(2026, 5, 25, 14, 23, 16, 589, DateTimeKind.Utc).AddTicks(1626),
+                            CreatedAt = new DateTime(2026, 5, 28, 10, 36, 47, 940, DateTimeKind.Utc).AddTicks(3195),
                             IsActive = true,
                             Name = "Default Test Clinic",
                             Phone = "+1234567890"
@@ -383,6 +425,76 @@ namespace clinicops.Migrations
                     b.HasIndex("ServiceId");
 
                     b.ToTable("PatientCases");
+                });
+
+            modelBuilder.Entity("ClinicOps.Domain.Entities.PatientConsent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("ClinicId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ConsentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("GivenByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.Property<bool>("HasGivenConsent")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("WithdrawnAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientId");
+
+                    b.ToTable("PatientConsents");
+                });
+
+            modelBuilder.Entity("ClinicOps.Domain.Entities.PatientPrivacyState", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("AnonymizedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsAnonymized")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientId")
+                        .IsUnique();
+
+                    b.ToTable("PatientPrivacyStates");
                 });
 
             modelBuilder.Entity("ClinicOps.Domain.Entities.Payment", b =>
@@ -715,6 +827,28 @@ namespace clinicops.Migrations
                     b.Navigation("Patient");
 
                     b.Navigation("Service");
+                });
+
+            modelBuilder.Entity("ClinicOps.Domain.Entities.PatientConsent", b =>
+                {
+                    b.HasOne("ClinicOps.Domain.Entities.Patient", "Patient")
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Patient");
+                });
+
+            modelBuilder.Entity("ClinicOps.Domain.Entities.PatientPrivacyState", b =>
+                {
+                    b.HasOne("ClinicOps.Domain.Entities.Patient", "Patient")
+                        .WithOne()
+                        .HasForeignKey("ClinicOps.Domain.Entities.PatientPrivacyState", "PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Patient");
                 });
 
             modelBuilder.Entity("ClinicOps.Domain.Entities.Payment", b =>

@@ -1,4 +1,5 @@
 using ClinicOps.API.DTOs.Patient;
+using ClinicOps.Application.Services.Gdpr;
 using ClinicOps.Application.Services.Patient;
 using ClinicOps.Domain.Entities;
 using ClinicOps.Domain.Enums;
@@ -17,11 +18,13 @@ namespace ClinicOps.API.Controllers
     {
         private readonly IPatientService _patientService;
         private readonly ApplicationDbContext _db;
+        private readonly IAuditLogService _auditLogService;
 
-        public PatientController(IPatientService patientService, ApplicationDbContext db)
+        public PatientController(IPatientService patientService, ApplicationDbContext db, IAuditLogService auditLogService)
         {
             _patientService = patientService;
             _db = db;
+            _auditLogService = auditLogService;
         }
 
         /// <summary>
@@ -92,6 +95,8 @@ namespace ClinicOps.API.Controllers
                 var result = await _patientService.RegisterPatientAtReceptionAsync(
                     clinicId,
                     request);
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+                await _auditLogService.TryLogAsync("PatientCreated", "Patient", result.Id.ToString(), clinicId, userId);
 
                 return Ok(result);
             }
@@ -281,6 +286,9 @@ namespace ClinicOps.API.Controllers
                 };
             }).ToList();
 
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+            await _auditLogService.TryLogAsync("MedicalRecordViewed", "PatientEMR", id.ToString(), clinicId, currentUserId);
+
             return Ok(new PatientEmrDto
             {
                 PatientId = patient.Id,
@@ -330,6 +338,8 @@ namespace ClinicOps.API.Controllers
 
             patient.IsActive = false;
             await _db.SaveChangesAsync();
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+            await _auditLogService.TryLogAsync("PatientDeleted", "Patient", patient.Id.ToString(), patient.ClinicId, userId);
 
             return NoContent();
         }

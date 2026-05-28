@@ -1,5 +1,6 @@
 using ClinicOps.API.DTOs.Auth;
 using ClinicOps.Application.Services.Auth;
+using ClinicOps.Application.Services.Gdpr;
 using ClinicOps.Domain.Entities;
 using ClinicOps.Domain.Enums;
 using ClinicOps.Infrastructure.Data;
@@ -17,17 +18,20 @@ namespace ClinicOps.API.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IJwtTokenService _jwt;
+        private readonly IAuditLogService _auditLogService;
 
         public AuthController(
             ApplicationDbContext db,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            IJwtTokenService jwt)
+            IJwtTokenService jwt,
+            IAuditLogService auditLogService)
         {
             _db = db;
             _userManager = userManager;
             _signInManager = signInManager;
             _jwt = jwt;
+            _auditLogService = auditLogService;
         }
 
         // =====================================================
@@ -42,7 +46,18 @@ namespace ClinicOps.API.Controllers
                 .FirstOrDefaultAsync(u => u.Email == request.Email);
 
             if (user == null)
+            {
+                await _auditLogService.TryLogAsync(
+                    action: "FailedLogin",
+                    entityName: "Auth",
+                    entityId: null,
+                    clinicId: null,
+                    userId: null,
+                    status: "Failed",
+                    severity: "Warning",
+                    description: $"Failed login attempt for email {request.Email}.");
                 return Unauthorized("Invalid email or password.");
+            }
 
             var validPassword =
                 await _signInManager.CheckPasswordSignInAsync(
@@ -52,12 +67,32 @@ namespace ClinicOps.API.Controllers
                 );
 
             if (!validPassword.Succeeded)
+            {
+                await _auditLogService.TryLogAsync(
+                    action: "FailedLogin",
+                    entityName: "Auth",
+                    entityId: null,
+                    clinicId: user.ClinicId,
+                    userId: user.Id,
+                    status: "Failed",
+                    severity: "Warning",
+                    description: $"Failed login attempt for user {user.Email}.");
                 return Unauthorized("Invalid email or password.");
+            }
 
             var roles = await _userManager.GetRolesAsync(user);
 
             // ✅ CAPTURE ALL 3 VALUES
             var (token, exp, role) = _jwt.CreateToken(user, roles);
+            await _auditLogService.TryLogAsync(
+                action: "Login",
+                entityName: "Auth",
+                entityId: null,
+                clinicId: user.ClinicId,
+                userId: user.Id,
+                status: "Success",
+                severity: "Info",
+                description: "User logged into the system successfully.");
 
             return Ok(new AuthResponse
             {
