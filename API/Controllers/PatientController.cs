@@ -183,5 +183,182 @@ namespace ClinicOps.API.Controllers
 
             return Ok(result);
         }
+
+        /// <summary>
+        /// Get EMR history for a specific patient, including consult dates, doctor, vitals, diagnosis, and therapy.
+        /// </summary>
+        [HttpGet("{id:guid}/emr")]
+        [ProducesResponseType(typeof(PatientEmrDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<PatientEmrDto>> GetPatientEmr(Guid id, [FromQuery] bool doctorView = false)
+        {
+            var (_, clinicId) = await ResolveClinicIdAsync();
+            var isDoctor = User.IsInRole("Doctor");
+
+            if (doctorView && !isDoctor)
+                return Forbid();
+
+            var effectiveDoctorView = doctorView && isDoctor;
+
+            var patient = await _db.Patients
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == id && p.ClinicId == clinicId && p.IsActive);
+
+            if (patient == null)
+                return NotFound("Patient not found.");
+
+            var cases = await _db.PatientCases
+                .AsNoTracking()
+                .Where(pc => pc.PatientId == id && pc.ClinicId == clinicId)
+                .OrderByDescending(pc => pc.CreatedAt)
+                .ToListAsync();
+
+            var caseIds = cases.Select(c => c.Id).ToList();
+
+            var vitalsByCase = await _db.VitalSigns
+                .AsNoTracking()
+                .Where(v => caseIds.Contains(v.PatientCaseId))
+                .OrderBy(v => v.RecordedAt)
+                .GroupBy(v => v.PatientCaseId)
+                .ToDictionaryAsync(
+                    g => g.Key,
+                    g => g.Select(v => new PatientEmrVitalsDto
+                    {
+                        Id = v.Id,
+                        WeightKg = v.WeightKg,
+                        SystolicPressure = v.SystolicPressure,
+                        DiastolicPressure = v.DiastolicPressure,
+                        TemperatureC = v.TemperatureC,
+                        HeartRate = v.HeartRate,
+                        RecordedAt = v.RecordedAt
+                    }).ToList());
+
+            var reports = await _db.MedicalReports
+                .AsNoTracking()
+                .Where(r => caseIds.Contains(r.PatientCaseId))
+                .ToListAsync();
+
+            var doctorUserIds = reports
+                .Select(r => r.DoctorUserId)
+                .Where(idValue => !string.IsNullOrWhiteSpace(idValue))
+                .Distinct()
+                .Cast<string>()
+                .ToList();
+
+            var doctorLookup = await _db.Users
+                .AsNoTracking()
+                .Where(u => doctorUserIds.Contains(u.Id))
+                .Select(u => new { u.Id, Name = u.DoctorDisplayName ?? u.Email ?? u.UserName })
+                .ToDictionaryAsync(u => u.Id, u => u.Name ?? u.Id);
+
+            var reportLookup = reports.ToDictionary(r => r.PatientCaseId, r => r);
+
+            var history = cases.Select(pc =>
+            {
+                reportLookup.TryGetValue(pc.Id, out var report);
+                vitalsByCase.TryGetValue(pc.Id, out var vitals);
+
+                var doctorUserId = report?.DoctorUserId;
+                var doctorName = !string.IsNullOrWhiteSpace(doctorUserId) && doctorLookup.TryGetValue(doctorUserId, out var resolvedName)
+                    ? resolvedName
+                    : null;
+
+                return new PatientEmrConsultDto
+                {
+                    PatientCaseId = pc.Id,
+                    ConsultDate = pc.CompletedAt ?? report?.CreatedAt ?? pc.CreatedAt,
+                    CaseStatus = pc.Status.ToString(),
+                    CanEdit = effectiveDoctorView,
+                    Notes = effectiveDoctorView ? pc.Notes : null,
+                    DoctorUserId = effectiveDoctorView ? doctorUserId : null,
+                    DoctorName = doctorName,
+                    Anamneza = effectiveDoctorView ? report?.Anamneza : null,
+                    Diagnosis = report?.Diagnosis,
+                    Therapy = report?.Therapy,
+                    ReportCreatedAt = report?.CreatedAt,
+                    Vitals = vitals ?? new List<PatientEmrVitalsDto>()
+                };
+            }).ToList();
+
+            return Ok(new PatientEmrDto
+            {
+                PatientId = patient.Id,
+                ClinicId = patient.ClinicId,
+                IsDoctorView = effectiveDoctorView,
+                IsReadOnly = !effectiveDoctorView,
+                FirstName = patient.FirstName,
+                LastName = patient.LastName,
+                DateOfBirth = patient.DateOfBirth,
+                Gender = patient.Gender,
+                Phone = patient.Phone,
+                History = history
+            });
+        }
+
+        /// <summary>
+        /// Clinic staff/SuperAdmin: soft delete patient (marks inactive).
+        /// </summary>
+        [HttpDelete("{id:guid}")]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeletePatient(Guid id, [FromQuery] Guid? clinicId = null)
+        {
+            var patientQuery = _db.Patients.Where(p => p.Id == id && p.IsActive);
+
+            if (User.IsInRole("SuperAdmin"))
+            {
+                if (clinicId.HasValue)
+                    patientQuery = patientQuery.Where(p => p.ClinicId == clinicId.Value);
+            }
+            else
+            {
+                // Non-superadmin users can only delete patients from their own clinic.
+                var clinicIdClaim = User.FindFirst("clinicId")?.Value;
+                if (string.IsNullOrWhiteSpace(clinicIdClaim) || !Guid.TryParse(clinicIdClaim, out var userClinicId))
+                    return Forbid();
+
+                patientQuery = patientQuery.Where(p => p.ClinicId == userClinicId);
+            }
+
+            var patient = await patientQuery.FirstOrDefaultAsync();
+            if (patient == null)
+                return NotFound("Patient not found.");
+
+            patient.IsActive = false;
+            await _db.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        private async Task<(bool isSuperAdmin, Guid clinicId)> ResolveClinicIdAsync()
+        {
+            var clinicIdClaim = User.FindFirst("clinicId")?.Value;
+            if (!string.IsNullOrEmpty(clinicIdClaim) && Guid.TryParse(clinicIdClaim, out var fromToken))
+                return (false, fromToken);
+
+            var defaultId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var clinic = await _db.Clinics.FindAsync(defaultId);
+            if (clinic == null)
+            {
+                clinic = new Clinic
+                {
+                    Id = defaultId,
+                    Name = "Default Test Clinic",
+                    Address = "123 Test Street",
+                    Phone = "+1234567890",
+                    ClinicMode = ClinicMode.FullTeam,
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true
+                };
+                _db.Clinics.Add(clinic);
+                await _db.SaveChangesAsync();
+            }
+
+            return (true, defaultId);
+        }
     }
 }

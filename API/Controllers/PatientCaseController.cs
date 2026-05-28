@@ -197,6 +197,7 @@ namespace ClinicOps.API.Controllers
         /// Doctor: submit or update diagnosis and therapy for a patient case. Broadcasts via SignalR.
         /// </summary>
         [HttpPost("{id:guid}/report")]
+        [Authorize(Roles = "Doctor,SuperAdmin")]
         [ProducesResponseType(typeof(MedicalReportDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -259,6 +260,116 @@ namespace ClinicOps.API.Controllers
                 .SendAsync("ReportUpdated", id, dto);
 
             return Ok(dto);
+        }
+
+        /// <summary>
+        /// Doctor: read EMR report for a case.
+        /// </summary>
+        [HttpGet("{id:guid}/report")]
+        [Authorize(Roles = "Doctor,SuperAdmin")]
+        [ProducesResponseType(typeof(MedicalReportDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<MedicalReportDto>> GetReport(Guid id)
+        {
+            var (_, clinicId) = await ResolveClinicIdAsync();
+            var @case = await _db.PatientCases
+                .AsNoTracking()
+                .FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
+            if (@case == null)
+                return NotFound("Patient case not found.");
+
+            var report = await _db.MedicalReports
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.PatientCaseId == id);
+            if (report == null)
+                return NotFound("Medical report not found.");
+
+            return Ok(new MedicalReportDto
+            {
+                Id = report.Id,
+                PatientCaseId = report.PatientCaseId,
+                Anamneza = report.Anamneza,
+                Diagnosis = report.Diagnosis,
+                Therapy = report.Therapy,
+                CreatedAt = report.CreatedAt,
+                DoctorId = report.DoctorUserId ?? string.Empty
+            });
+        }
+
+        /// <summary>
+        /// Doctor: delete EMR report for a case.
+        /// </summary>
+        [HttpDelete("{id:guid}/report")]
+        [Authorize(Roles = "Doctor,SuperAdmin")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeleteReport(Guid id)
+        {
+            var (_, clinicId) = await ResolveClinicIdAsync();
+            var @case = await _db.PatientCases
+                .FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
+            if (@case == null)
+                return NotFound("Patient case not found.");
+
+            var report = await _db.MedicalReports.FirstOrDefaultAsync(m => m.PatientCaseId == id);
+            if (report == null)
+                return NotFound("Medical report not found.");
+
+            _db.MedicalReports.Remove(report);
+            await _db.SaveChangesAsync();
+
+            await _hubContext.Clients
+                .Group(ClinicHub.GroupPrefix + clinicId)
+                .SendAsync("ReportDeleted", id);
+            await _hubContext.Clients
+                .Group("case_" + id)
+                .SendAsync("ReportDeleted", id);
+
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Clinic staff/SuperAdmin: delete a patient case and all cascade children (vitals/report/labs/payment).
+        /// </summary>
+        [HttpDelete("{id:guid}")]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeleteCase(Guid id, [FromQuery] Guid? clinicId = null)
+        {
+            var query = _db.PatientCases.Where(pc => pc.Id == id);
+
+            if (User.IsInRole("SuperAdmin"))
+            {
+                if (clinicId.HasValue)
+                    query = query.Where(pc => pc.ClinicId == clinicId.Value);
+            }
+            else
+            {
+                var clinicIdClaim = User.FindFirst("clinicId")?.Value;
+                if (string.IsNullOrWhiteSpace(clinicIdClaim) || !Guid.TryParse(clinicIdClaim, out var userClinicId))
+                    return Forbid();
+
+                query = query.Where(pc => pc.ClinicId == userClinicId);
+            }
+
+            var @case = await query.FirstOrDefaultAsync();
+            if (@case == null)
+                return NotFound("Patient case not found.");
+
+            _db.PatientCases.Remove(@case);
+            await _db.SaveChangesAsync();
+
+            await _hubContext.Clients
+                .Group(ClinicHub.GroupPrefix + @case.ClinicId)
+                .SendAsync("CaseDeleted", id);
+            await _hubContext.Clients
+                .Group("case_" + id)
+                .SendAsync("CaseDeleted", id);
+
+            return NoContent();
         }
 
         /// <summary>

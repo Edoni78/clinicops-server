@@ -210,4 +210,34 @@ These are **not** linked to `Patients` or `PatientCases` by FK:
 
 ---
 
+## EMR (patient history view)
+
+EMR is represented as a **read model** built from existing patient/case clinical tables (no separate EMR table required).
+
+### API endpoint
+
+- `GET /api/Patient/{patientId}/emr`
+
+### EMR history row (per consult / case)
+
+Each history item is composed from:
+
+| EMR field | Source table/column |
+|-----------|---------------------|
+| `PatientCaseId` | `PatientCases.Id` |
+| `ConsultDate` | `PatientCases.CompletedAt` → fallback `MedicalReports.CreatedAt` → fallback `PatientCases.CreatedAt` |
+| `CaseStatus` | `PatientCases.Status` |
+| `Notes` | `PatientCases.Notes` |
+| `DoctorUserId` | `MedicalReports.DoctorUserId` |
+| `DoctorName` | `AspNetUsers.DoctorDisplayName` (fallback email/username) via `DoctorUserId` |
+| `Anamneza`, `Diagnosis`, `Therapy` | `MedicalReports` |
+| `Vitals[]` | all `VitalSigns` rows for that case, ordered by `RecordedAt` |
+
+### Scope and safety
+
+- Data is filtered by clinic access (same clinic rules as existing patient/case endpoints).
+- Existing workflow/tables remain unchanged: reception, vitals entry, report writing, labs, payments.
+
+---
+
 *See also: `relations and tables.md` for full database documentation.*

@@ -124,6 +124,39 @@ namespace ClinicOps.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Delete a clinic staff user (Doctor, Nurse, LabTechnician).
+        /// ClinicAdmin can delete users in their own clinic; SuperAdmin can delete by clinicId query.
+        /// </summary>
+        [HttpDelete("{id}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Delete(string id, [FromQuery] Guid? clinicId = null)
+        {
+            var (_, resolvedClinicId) = await ResolveClinicIdAsync(clinicId);
+            if (!resolvedClinicId.HasValue)
+                return BadRequest("ClinicId required for SuperAdmin, or login as ClinicAdmin.");
+
+            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == id);
+            if (user == null)
+                return NotFound("User not found.");
+
+            if (user.ClinicId != resolvedClinicId.Value)
+                return NotFound("User not found in this clinic.");
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var isAllowedStaff = roles.Any(r => AllowedRoles.Contains(r, StringComparer.OrdinalIgnoreCase));
+            if (!isAllowedStaff)
+                return BadRequest("Only clinic staff users can be deleted from this endpoint.");
+
+            var result = await _userManager.DeleteAsync(user);
+            if (!result.Succeeded)
+                return BadRequest(string.Join("; ", result.Errors.Select(e => e.Description)));
+
+            return NoContent();
+        }
+
         private async Task<(bool isSuperAdmin, Guid? clinicId)> ResolveClinicIdAsync(Guid? fromQuery = null)
         {
             var clinicIdClaim = User.FindFirst("clinicId")?.Value;
