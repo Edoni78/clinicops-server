@@ -3,7 +3,9 @@ using ClinicOps.API.DTOs.MedicalReport;
 using ClinicOps.API.DTOs.PatientCase;
 using ClinicOps.API.DTOs.Vitals;
 using ClinicOps.API.Hubs;
+using ClinicOps.Application.Services.Common;
 using ClinicOps.Application.Services.Gdpr;
+using ClinicOps.Application.Services.Patient;
 using ClinicOps.Application.Services.Pdf;
 using ClinicOps.Domain.Entities;
 using ClinicOps.Domain.Enums;
@@ -13,8 +15,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using PdfSharpCore.Pdf;
-using PdfSharpCore.Pdf.IO;
 using System.Security.Claims;
 
 namespace ClinicOps.API.Controllers
@@ -26,17 +26,40 @@ namespace ClinicOps.API.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly IHubContext<ClinicHub> _hubContext;
-        private readonly ICaseReportPdfService _pdfService;
         private readonly IWebHostEnvironment _env;
         private readonly IAuditLogService _auditLogService;
+        private readonly IClinicContextService _clinicContextService;
+        private readonly IPatientCaseReportService _patientCaseReportService;
+        private readonly IPatientCaseWorkflowService _patientCaseWorkflowService;
+        private readonly IPatientCaseQueryService _patientCaseQueryService;
+        private readonly IPatientCaseCommandService _patientCaseCommandService;
+        private readonly IPatientCaseLabService _patientCaseLabService;
+        private readonly IPatientCasePdfFacadeService _patientCasePdfFacadeService;
 
-        public PatientCaseController(ApplicationDbContext db, IHubContext<ClinicHub> hubContext, ICaseReportPdfService pdfService, IWebHostEnvironment env, IAuditLogService auditLogService)
+        public PatientCaseController(
+            ApplicationDbContext db,
+            IHubContext<ClinicHub> hubContext,
+            IWebHostEnvironment env,
+            IAuditLogService auditLogService,
+            IClinicContextService clinicContextService,
+            IPatientCaseReportService patientCaseReportService,
+            IPatientCaseWorkflowService patientCaseWorkflowService,
+            IPatientCaseQueryService patientCaseQueryService,
+            IPatientCaseCommandService patientCaseCommandService,
+            IPatientCaseLabService patientCaseLabService,
+            IPatientCasePdfFacadeService patientCasePdfFacadeService)
         {
             _db = db;
             _hubContext = hubContext;
-            _pdfService = pdfService;
             _env = env;
             _auditLogService = auditLogService;
+            _clinicContextService = clinicContextService;
+            _patientCaseReportService = patientCaseReportService;
+            _patientCaseWorkflowService = patientCaseWorkflowService;
+            _patientCaseQueryService = patientCaseQueryService;
+            _patientCaseCommandService = patientCaseCommandService;
+            _patientCaseLabService = patientCaseLabService;
+            _patientCasePdfFacadeService = patientCasePdfFacadeService;
         }
 
         /// <summary>
@@ -46,32 +69,7 @@ namespace ClinicOps.API.Controllers
         [ProducesResponseType(typeof(List<PatientCaseListItemDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<List<PatientCaseListItemDto>>> List([FromQuery] string? status = null)
         {
-            var (_, clinicId) = await ResolveClinicIdAsync();
-            var query = _db.PatientCases
-                .AsNoTracking()
-                .Where(pc => pc.ClinicId == clinicId);
-
-            if (!string.IsNullOrEmpty(status) && Enum.TryParse<PatientCaseStatus>(status, ignoreCase: true, out var statusEnum))
-                query = query.Where(pc => pc.Status == statusEnum);
-
-            // Project Patient + Service in one query (do not Include only Patient — Service join can be dropped).
-            var list = await query
-                .OrderByDescending(pc => pc.CreatedAt)
-                .Select(pc => new PatientCaseListItemDto
-                {
-                    Id = pc.Id,
-                    PatientId = pc.PatientId,
-                    PatientFirstName = pc.Patient.FirstName,
-                    PatientLastName = pc.Patient.LastName,
-                    Status = pc.Status.ToString(),
-                    CreatedAt = pc.CreatedAt,
-                    CompletedAt = pc.CompletedAt,
-                    ServiceId = pc.ServiceId,
-                    ServiceName = pc.ServiceId != null ? pc.Service!.Name : null,
-                    ServicePrice = pc.ServiceId != null ? pc.Service!.Price : null
-                })
-                .ToListAsync();
-
+            var list = await _patientCaseQueryService.ListAsync(status, User);
             return Ok(list);
         }
 
@@ -83,64 +81,15 @@ namespace ClinicOps.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<PatientCaseDetailDto>> GetById(Guid id)
         {
-            var (_, clinicId) = await ResolveClinicIdAsync();
-            var @case = await _db.PatientCases
-                .Include(pc => pc.Patient)
-                .Include(pc => pc.Clinic)
-                .Include(pc => pc.Service)
-                .FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
-
-            if (@case == null)
-                return NotFound("Patient case not found.");
-
-            var latestVitals = await _db.VitalSigns
-                .Where(v => v.PatientCaseId == id)
-                .OrderByDescending(v => v.RecordedAt)
-                .FirstOrDefaultAsync();
-
-            var report = await _db.MedicalReports
-                .FirstOrDefaultAsync(m => m.PatientCaseId == id);
-
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
-            await _auditLogService.TryLogAsync("MedicalRecordViewed", "PatientCase", id.ToString(), clinicId, userId);
-
-            return Ok(new PatientCaseDetailDto
+            try
             {
-                Id = @case.Id,
-                ClinicId = @case.ClinicId,
-                PatientId = @case.PatientId,
-                PatientFirstName = @case.Patient.FirstName,
-                PatientLastName = @case.Patient.LastName,
-                PatientDateOfBirth = @case.Patient.DateOfBirth,
-                PatientPhone = @case.Patient.Phone,
-                PatientGender = @case.Patient.Gender,
-                Status = @case.Status.ToString(),
-                CreatedAt = @case.CreatedAt,
-                CompletedAt = @case.CompletedAt,
-                Notes = @case.Notes,
-                ServiceId = @case.ServiceId,
-                ServiceName = @case.Service?.Name,
-                ServicePrice = @case.Service?.Price,
-                LatestVitals = latestVitals == null ? null : new VitalSignsSummaryDto
-                {
-                    Id = latestVitals.Id,
-                    WeightKg = latestVitals.WeightKg,
-                    SystolicPressure = latestVitals.SystolicPressure,
-                    DiastolicPressure = latestVitals.DiastolicPressure,
-                    TemperatureC = latestVitals.TemperatureC,
-                    HeartRate = latestVitals.HeartRate,
-                    RecordedAt = latestVitals.RecordedAt
-                },
-                MedicalReport = report == null ? null : new MedicalReportSummaryDto
-                {
-                    Id = report.Id,
-                    Anamneza = report.Anamneza,
-                    Diagnosis = report.Diagnosis,
-                    Therapy = report.Therapy,
-                    CreatedAt = report.CreatedAt,
-                    DoctorId = report.DoctorUserId ?? ""
-                }
-            });
+                var dto = await _patientCaseQueryService.GetByIdAsync(id, User);
+                return Ok(dto);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
         /// <summary>
@@ -153,40 +102,19 @@ namespace ClinicOps.API.Controllers
         public async Task<ActionResult<VitalSignsDto>> SubmitVitals(Guid id, [FromBody] SubmitVitalSignsRequest request)
         {
             var (_, clinicId) = await ResolveClinicIdAsync();
-            if (await IsSoloDoctorClinicAsync(clinicId))
-                return BadRequest("This clinic mode does not include nurse workflow.");
-            var @case = await _db.PatientCases
-                .Include(pc => pc.Patient)
-                .FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
-
-            if (@case == null)
-                return NotFound("Patient case not found.");
-
-            var vitals = new VitalSigns
+            VitalSignsDto dto;
+            try
             {
-                ClinicId = clinicId,
-                PatientCaseId = id,
-                WeightKg = request.WeightKg,
-                SystolicPressure = request.SystolicPressure,
-                DiastolicPressure = request.DiastolicPressure,
-                TemperatureC = request.TemperatureC,
-                HeartRate = request.HeartRate,
-                RecordedAt = DateTime.UtcNow
-            };
-            _db.VitalSigns.Add(vitals);
-            await _db.SaveChangesAsync();
-
-            var dto = new VitalSignsDto
+                dto = await _patientCaseCommandService.SubmitVitalsAsync(id, clinicId, request);
+            }
+            catch (InvalidOperationException ex)
             {
-                Id = vitals.Id,
-                PatientCaseId = id,
-                WeightKg = vitals.WeightKg,
-                SystolicPressure = vitals.SystolicPressure,
-                DiastolicPressure = vitals.DiastolicPressure,
-                TemperatureC = vitals.TemperatureC,
-                HeartRate = vitals.HeartRate,
-                RecordedAt = vitals.RecordedAt
-            };
+                return BadRequest(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
 
             // Real-time: notify clinic (doctor panel) and optional case group
             await _hubContext.Clients
@@ -215,49 +143,15 @@ namespace ClinicOps.API.Controllers
                 return Unauthorized();
 
             var (_, clinicId) = await ResolveClinicIdAsync();
-            var @case = await _db.PatientCases
-                .FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
-
-            if (@case == null)
-                return NotFound("Patient case not found.");
-
-            var existing = await _db.MedicalReports.FirstOrDefaultAsync(m => m.PatientCaseId == id);
-            MedicalReport report;
-            if (existing != null)
+            MedicalReportDto dto;
+            try
             {
-                existing.Anamneza = request.Anamneza;
-                existing.Diagnosis = request.Diagnosis;
-                existing.Therapy = request.Therapy;
-                existing.DoctorUserId = userId;
-                report = existing;
+                dto = await _patientCaseReportService.SubmitReportAsync(id, clinicId, userId, request);
             }
-            else
+            catch (KeyNotFoundException ex)
             {
-                report = new MedicalReport
-                {
-                    ClinicId = clinicId,
-                    PatientCaseId = id,
-                    Anamneza = request.Anamneza,
-                    Diagnosis = request.Diagnosis,
-                    Therapy = request.Therapy,
-                    DoctorId = Guid.Empty,
-                    DoctorUserId = userId
-                };
-                _db.MedicalReports.Add(report);
+                return NotFound(ex.Message);
             }
-            await _db.SaveChangesAsync();
-            await _auditLogService.TryLogAsync("MedicalRecordUpdated", "MedicalReport", report.Id.ToString(), clinicId, userId);
-
-            var dto = new MedicalReportDto
-            {
-                Id = report.Id,
-                PatientCaseId = id,
-                Anamneza = report.Anamneza,
-                Diagnosis = report.Diagnosis,
-                Therapy = report.Therapy,
-                CreatedAt = report.CreatedAt,
-                DoctorId = report.DoctorUserId ?? userId
-            };
 
             await _hubContext.Clients
                 .Group(ClinicHub.GroupPrefix + clinicId)
@@ -279,31 +173,16 @@ namespace ClinicOps.API.Controllers
         public async Task<ActionResult<MedicalReportDto>> GetReport(Guid id)
         {
             var (_, clinicId) = await ResolveClinicIdAsync();
-            var @case = await _db.PatientCases
-                .AsNoTracking()
-                .FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
-            if (@case == null)
-                return NotFound("Patient case not found.");
-
-            var report = await _db.MedicalReports
-                .AsNoTracking()
-                .FirstOrDefaultAsync(m => m.PatientCaseId == id);
-            if (report == null)
-                return NotFound("Medical report not found.");
-
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
-            await _auditLogService.TryLogAsync("MedicalRecordViewed", "MedicalReport", report.Id.ToString(), clinicId, userId);
-
-            return Ok(new MedicalReportDto
+            try
             {
-                Id = report.Id,
-                PatientCaseId = report.PatientCaseId,
-                Anamneza = report.Anamneza,
-                Diagnosis = report.Diagnosis,
-                Therapy = report.Therapy,
-                CreatedAt = report.CreatedAt,
-                DoctorId = report.DoctorUserId ?? string.Empty
-            });
+                var dto = await _patientCaseReportService.GetReportAsync(id, clinicId, userId);
+                return Ok(dto);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
         /// <summary>
@@ -316,19 +195,15 @@ namespace ClinicOps.API.Controllers
         public async Task<IActionResult> DeleteReport(Guid id)
         {
             var (_, clinicId) = await ResolveClinicIdAsync();
-            var @case = await _db.PatientCases
-                .FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
-            if (@case == null)
-                return NotFound("Patient case not found.");
-
-            var report = await _db.MedicalReports.FirstOrDefaultAsync(m => m.PatientCaseId == id);
-            if (report == null)
-                return NotFound("Medical report not found.");
-
-            _db.MedicalReports.Remove(report);
-            await _db.SaveChangesAsync();
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
-            await _auditLogService.TryLogAsync("PatientDeleted", "MedicalReport", report.Id.ToString(), clinicId, userId);
+            try
+            {
+                await _patientCaseReportService.DeleteReportAsync(id, clinicId, userId);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
 
             await _hubContext.Clients
                 .Group(ClinicHub.GroupPrefix + clinicId)
@@ -351,33 +226,22 @@ namespace ClinicOps.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteCase(Guid id, [FromQuery] Guid? clinicId = null)
         {
-            var query = _db.PatientCases.Where(pc => pc.Id == id);
-
-            if (User.IsInRole("SuperAdmin"))
+            Guid resolvedClinicId;
+            try
             {
-                if (clinicId.HasValue)
-                    query = query.Where(pc => pc.ClinicId == clinicId.Value);
+                resolvedClinicId = await _patientCaseWorkflowService.DeleteCaseAsync(id, clinicId, User);
             }
-            else
+            catch (UnauthorizedAccessException)
             {
-                var clinicIdClaim = User.FindFirst("clinicId")?.Value;
-                if (string.IsNullOrWhiteSpace(clinicIdClaim) || !Guid.TryParse(clinicIdClaim, out var userClinicId))
-                    return Forbid();
-
-                query = query.Where(pc => pc.ClinicId == userClinicId);
+                return Forbid();
             }
-
-            var @case = await query.FirstOrDefaultAsync();
-            if (@case == null)
-                return NotFound("Patient case not found.");
-
-            _db.PatientCases.Remove(@case);
-            await _db.SaveChangesAsync();
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
-            await _auditLogService.TryLogAsync("PatientDeleted", "PatientCase", id.ToString(), @case.ClinicId, userId);
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
 
             await _hubContext.Clients
-                .Group(ClinicHub.GroupPrefix + @case.ClinicId)
+                .Group(ClinicHub.GroupPrefix + resolvedClinicId)
                 .SendAsync("CaseDeleted", id);
             await _hubContext.Clients
                 .Group("case_" + id)
@@ -397,26 +261,18 @@ namespace ClinicOps.API.Controllers
             if (!Enum.TryParse<PatientCaseStatus>(status, ignoreCase: true, out var statusEnum))
                 return BadRequest("Invalid status. Use: Waiting, InProgress, InConsultation, Completed, Finished.");
             var (_, clinicId) = await ResolveClinicIdAsync();
-            var @case = await _db.PatientCases
-                .FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
-
-            if (@case == null)
-                return NotFound("Patient case not found.");
-
-            if (statusEnum == PatientCaseStatus.InConsultation)
+            try
             {
-                var anotherInConsultation = await _db.PatientCases.AnyAsync(pc =>
-                    pc.ClinicId == clinicId
-                    && pc.Id != id
-                    && pc.Status == PatientCaseStatus.InConsultation);
-                if (anotherInConsultation)
-                    return BadRequest("Mjeku ka tashmë një pacient në konsultim. Përfundoni vizitën aktuale para se të hapni një tjetër.");
+                statusEnum = await _patientCaseWorkflowService.UpdateStatusAsync(id, statusEnum, clinicId);
             }
-
-            @case.Status = statusEnum;
-            if (statusEnum == PatientCaseStatus.Completed || statusEnum == PatientCaseStatus.Finished)
-                @case.CompletedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
 
             await _hubContext.Clients
                 .Group(ClinicHub.GroupPrefix + clinicId)
@@ -444,24 +300,29 @@ namespace ClinicOps.API.Controllers
                 return BadRequest("serviceId is required (query string or JSON body).");
 
             var (_, clinicId) = await ResolveClinicIdAsync();
-            var @case = await _db.PatientCases.FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
-            if (@case == null)
-                return NotFound("Patient case not found.");
-
-            var service = await _db.Services.FirstOrDefaultAsync(s =>
-                s.Id == resolved.Value && s.ClinicId == clinicId && s.IsActive);
-            if (service == null)
-                return BadRequest("Service not found, inactive, or not in this clinic.");
-
-            @case.ServiceId = service.Id;
-            await _db.SaveChangesAsync();
+            Guid attachedServiceId;
+            string attachedServiceName;
+            decimal attachedServicePrice;
+            try
+            {
+                (attachedServiceId, attachedServiceName, attachedServicePrice) =
+                    await _patientCaseCommandService.AttachServiceAsync(id, clinicId, resolved.Value);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
 
             return Ok(new
             {
                 id,
-                serviceId = service.Id,
-                serviceName = service.Name,
-                servicePrice = service.Price
+                serviceId = attachedServiceId,
+                serviceName = attachedServiceName,
+                servicePrice = attachedServicePrice
             });
         }
 
@@ -475,113 +336,19 @@ namespace ClinicOps.API.Controllers
         public async Task<IActionResult> DownloadCaseReportPdf(Guid id)
         {
             var (_, clinicId) = await ResolveClinicIdAsync();
-            var isSoloDoctor = await IsSoloDoctorClinicAsync(clinicId);
-            var @case = await _db.PatientCases
-                .Include(pc => pc.Patient)
-                .Include(pc => pc.Clinic)
-                .FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
-
-            if (@case == null)
-                return NotFound("Patient case not found.");
-
-            var latestVitals = await _db.VitalSigns
-                .Where(v => v.PatientCaseId == id)
-                .OrderByDescending(v => v.RecordedAt)
-                .FirstOrDefaultAsync();
-            var report = await _db.MedicalReports.FirstOrDefaultAsync(m => m.PatientCaseId == id);
-
-            string? doctorDisplayName = null;
-            string? signatureUrl = null;
-            string? stampUrl = null;
-            string? signatureDataUri = null;
-            string? stampDataUri = null;
-            byte[]? signatureBytes = null;
-            byte[]? stampBytes = null;
-            var resolvedDoctorUserId = report?.DoctorUserId;
-            if (string.IsNullOrWhiteSpace(resolvedDoctorUserId))
-            {
-                // Backward-compatible fallback: for older rows where DoctorUserId was not populated.
-                resolvedDoctorUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                    ?? User.FindFirst("sub")?.Value;
-            }
-
-            if (!string.IsNullOrWhiteSpace(resolvedDoctorUserId))
-            {
-                var doctorUser = await _db.Users.AsNoTracking()
-                    .FirstOrDefaultAsync(u => u.Id == resolvedDoctorUserId);
-                if (doctorUser != null)
-                {
-                    doctorDisplayName = doctorUser.DoctorDisplayName ?? doctorUser.Email;
-                    signatureUrl = doctorUser.SignatureUrl;
-                    stampUrl = doctorUser.StampUrl;
-                    signatureDataUri = TryReadFileAsDataUri(_env, signatureUrl);
-                    stampDataUri = TryReadFileAsDataUri(_env, stampUrl);
-                    signatureBytes = TryReadFileBytes(_env, signatureUrl);
-                    stampBytes = TryReadFileBytes(_env, stampUrl);
-                }
-            }
-
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
-            if (signatureBytes == null && !string.IsNullOrWhiteSpace(signatureUrl))
-                signatureBytes = await TryDownloadImageBytesAsync(baseUrl, signatureUrl);
-            if (stampBytes == null && !string.IsNullOrWhiteSpace(stampUrl))
-                stampBytes = await TryDownloadImageBytesAsync(baseUrl, stampUrl);
-
-            var model = new PatientCaseReportModel
+            var fallbackDoctorUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirst("sub")?.Value;
+            try
             {
-                ClinicName = @case.Clinic?.Name ?? "",
-                ClinicAddress = @case.Clinic?.Address,
-                ClinicPhone = @case.Clinic?.Phone,
-                ClinicLogoUrl = @case.Clinic?.LogoUrl,
-                ClinicLogoDataUri = TryReadFileAsDataUri(_env, @case.Clinic?.LogoUrl),
-                PatientFirstName = @case.Patient.FirstName,
-                PatientLastName = @case.Patient.LastName,
-                PatientDateOfBirth = @case.Patient.DateOfBirth,
-                PatientGender = @case.Patient.Gender,
-                PatientPhone = @case.Patient.Phone,
-                Status = @case.Status.ToString(),
-                CreatedAt = @case.CreatedAt,
-                Notes = @case.Notes,
-                LatestVitals = latestVitals == null ? null : new VitalsModel
-                {
-                    WeightKg = latestVitals.WeightKg,
-                    SystolicPressure = latestVitals.SystolicPressure,
-                    DiastolicPressure = latestVitals.DiastolicPressure,
-                    TemperatureC = latestVitals.TemperatureC,
-                    HeartRate = latestVitals.HeartRate,
-                    RecordedAt = latestVitals.RecordedAt
-                },
-                MedicalReport = report == null ? null : new MedicalReportModel
-                {
-                    Anamneza = report.Anamneza,
-                    Diagnosis = report.Diagnosis,
-                    Therapy = report.Therapy,
-                    CreatedAt = report.CreatedAt
-                },
-                BaseUrl = baseUrl,
-                DoctorDisplayName = doctorDisplayName,
-                SignatureUrl = signatureUrl,
-                StampUrl = stampUrl,
-                SignatureDataUri = signatureDataUri,
-                StampDataUri = stampDataUri,
-                SignatureBytes = signatureBytes,
-                StampBytes = stampBytes
-            };
-
-            var pdfBytes = await _pdfService.GenerateCaseReportPdfAsync(model);
-
-            // If the case has lab result PDFs, append them as additional pages (first page = report, then labs)
-            var labResults = await _db.LabResults
-                .Where(l => l.PatientCaseId == id)
-                .OrderBy(l => l.UploadedAt)
-                .ToListAsync();
-            if (!isSoloDoctor && labResults.Count > 0)
-            {
-                pdfBytes = MergeReportWithLabPdfs(pdfBytes, labResults);
+                var (fileBytes, fileName) = await _patientCasePdfFacadeService
+                    .GenerateCaseReportPdfAsync(id, clinicId, baseUrl, fallbackDoctorUserId);
+                return File(fileBytes, "application/pdf", fileName);
             }
-
-            var fileName = $"CaseReport_{@case.Patient.LastName}_{@case.Patient.FirstName}_{id:N}.pdf";
-            return File(pdfBytes, "application/pdf", fileName);
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
         /// <summary>
@@ -593,26 +360,19 @@ namespace ClinicOps.API.Controllers
         public async Task<ActionResult<List<LabResultDto>>> ListLabResults(Guid id)
         {
             var (_, clinicId) = await ResolveClinicIdAsync();
-            if (await IsSoloDoctorClinicAsync(clinicId))
-                return BadRequest("This clinic mode does not include laboratory workflow.");
-            var @case = await _db.PatientCases.FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
-            if (@case == null)
-                return NotFound("Patient case not found.");
-
-            var list = await _db.LabResults
-                .Where(l => l.PatientCaseId == id)
-                .OrderBy(l => l.UploadedAt)
-                .Select(l => new LabResultDto
-                {
-                    Id = l.Id,
-                    PatientCaseId = l.PatientCaseId,
-                    FileName = l.FileName,
-                    DownloadUrl = $"/api/PatientCase/{id}/labresults/{l.Id}/file",
-                    ContentType = l.ContentType,
-                    UploadedAt = l.UploadedAt,
-                    UploadedById = l.UploadedById
-                })
-                .ToListAsync();
+            List<LabResultDto> list;
+            try
+            {
+                list = await _patientCaseLabService.ListLabResultsAsync(id, clinicId);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
             return Ok(list);
         }
 
@@ -633,46 +393,27 @@ namespace ClinicOps.API.Controllers
                 return BadRequest("Only PDF files are allowed for lab results.");
 
             var (_, clinicId) = await ResolveClinicIdAsync();
-            if (await IsSoloDoctorClinicAsync(clinicId))
-                return BadRequest("This clinic mode does not include laboratory workflow.");
-            var @case = await _db.PatientCases.FirstOrDefaultAsync(pc => pc.Id == id && pc.ClinicId == clinicId);
-            if (@case == null)
-                return NotFound("Patient case not found.");
-
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var labId = Guid.NewGuid();
-            var relativePath = Path.Combine("LabUploads", id.ToString("N"), labId.ToString("N") + ".pdf").Replace('\\', '/');
-
-            var labResult = new LabResult
+            LabResultDto dto;
+            try
             {
-                Id = labId,
-                ClinicId = clinicId,
-                PatientCaseId = id,
-                FileName = Path.GetFileName(file.FileName) ?? $"lab_{labId:N}.pdf",
-                FilePath = relativePath,
-                ContentType = "application/pdf",
-                UploadedAt = DateTime.UtcNow,
-                UploadedById = userId
-            };
-            _db.LabResults.Add(labResult);
-
-            var fullPath = Path.Combine(_env.ContentRootPath ?? "", relativePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-            await using (var stream = new FileStream(fullPath, FileMode.Create))
-                await file.CopyToAsync(stream);
-
-            await _db.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(ListLabResults), new { id }, new LabResultDto
+                dto = await _patientCaseLabService.UploadLabResultAsync(
+                    id,
+                    clinicId,
+                    userId,
+                    file,
+                    _env.ContentRootPath ?? "");
+            }
+            catch (InvalidOperationException ex)
             {
-                Id = labResult.Id,
-                PatientCaseId = labResult.PatientCaseId,
-                FileName = labResult.FileName,
-                DownloadUrl = $"/api/PatientCase/{id}/labresults/{labResult.Id}/file",
-                ContentType = labResult.ContentType,
-                UploadedAt = labResult.UploadedAt,
-                UploadedById = labResult.UploadedById
-            });
+                return BadRequest(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+
+            return CreatedAtAction(nameof(ListLabResults), new { id }, dto);
         }
 
         /// <summary>
@@ -684,168 +425,36 @@ namespace ClinicOps.API.Controllers
         public async Task<IActionResult> DownloadLabResultFile(Guid id, Guid labId)
         {
             var (_, clinicId) = await ResolveClinicIdAsync();
-            if (await IsSoloDoctorClinicAsync(clinicId))
-                return BadRequest("This clinic mode does not include laboratory workflow.");
-            var lab = await _db.LabResults.FirstOrDefaultAsync(l =>
-                l.Id == labId && l.PatientCaseId == id && l.ClinicId == clinicId);
-            if (lab == null)
-                return NotFound("Lab result not found.");
-
-            var fullPath = Path.Combine(_env.ContentRootPath ?? "", lab.FilePath.Replace('/', Path.DirectorySeparatorChar));
-            if (!System.IO.File.Exists(fullPath))
-                return NotFound("Lab result file not found on disk.");
-
-            var bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
-            await _auditLogService.TryLogAsync("MedicalRecordViewed", "LabResultFile", labId.ToString(), clinicId, userId);
-            return File(bytes, lab.ContentType ?? "application/pdf", lab.FileName);
-        }
-
-        private byte[] MergeReportWithLabPdfs(byte[] reportPdfBytes, List<LabResult> labResults)
-        {
-            using var outputDoc = new PdfDocument();
-            using (var reportStream = new MemoryStream(reportPdfBytes))
-            using (var reportDoc = PdfReader.Open(reportStream, PdfDocumentOpenMode.Import))
+            try
             {
-                for (int i = 0; i < reportDoc.PageCount; i++)
-                    outputDoc.AddPage(reportDoc.Pages[i]);
+                var (bytes, contentTypeResolved, fileName) =
+                    await _patientCaseLabService.DownloadLabResultFileAsync(
+                        id,
+                        labId,
+                        clinicId,
+                        _env.ContentRootPath ?? "",
+                        userId);
+                return File(bytes, contentTypeResolved, fileName);
             }
-            var contentRoot = _env.ContentRootPath ?? "";
-            foreach (var lab in labResults)
+            catch (InvalidOperationException ex)
             {
-                var fullPath = Path.Combine(contentRoot, lab.FilePath.Replace('/', Path.DirectorySeparatorChar));
-                if (!System.IO.File.Exists(fullPath)) continue;
-                using (var labStream = System.IO.File.OpenRead(fullPath))
-                using (var labDoc = PdfReader.Open(labStream, PdfDocumentOpenMode.Import))
-                {
-                    for (int i = 0; i < labDoc.PageCount; i++)
-                        outputDoc.AddPage(labDoc.Pages[i]);
-                }
+                return BadRequest(ex.Message);
             }
-            using var ms = new MemoryStream();
-            outputDoc.Save(ms, false);
-            return ms.ToArray();
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (FileNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
         private async Task<(bool isSuperAdmin, Guid clinicId)> ResolveClinicIdAsync()
         {
-            var clinicIdClaim = User.FindFirst("clinicId")?.Value;
-            if (!string.IsNullOrEmpty(clinicIdClaim) && Guid.TryParse(clinicIdClaim, out var fromToken))
-                return (false, fromToken);
-
-            // SuperAdmin: default clinic
-            var defaultId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-            var clinic = await _db.Clinics.FindAsync(defaultId);
-            if (clinic == null)
-            {
-                clinic = new Clinic
-                {
-                    Id = defaultId,
-                    Name = "Default Test Clinic",
-                    Address = "123 Test Street",
-                    Phone = "+1234567890",
-                    ClinicMode = ClinicMode.FullTeam,
-                    CreatedAt = DateTime.UtcNow,
-                    IsActive = true
-                };
-                _db.Clinics.Add(clinic);
-                await _db.SaveChangesAsync();
-            }
-            return (true, defaultId);
+            return await _clinicContextService.ResolveClinicIdAsync(User);
         }
 
-        private async Task<bool> IsSoloDoctorClinicAsync(Guid clinicId)
-        {
-            var mode = await _db.Clinics
-                .Where(c => c.Id == clinicId)
-                .Select(c => c.ClinicMode)
-                .FirstOrDefaultAsync();
-            return mode == ClinicMode.SoloDoctor;
-        }
-
-        private static string? TryReadFileAsDataUri(IWebHostEnvironment env, string? relativePath)
-        {
-            var path = ResolveLocalFilePath(env, relativePath);
-            if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path)) return null;
-            try
-            {
-                var bytes = System.IO.File.ReadAllBytes(path);
-                var base64 = Convert.ToBase64String(bytes);
-                var ext = System.IO.Path.GetExtension(path).ToLowerInvariant();
-                var mime = ext switch
-                {
-                    ".jpg" or ".jpeg" => "image/jpeg",
-                    ".png" => "image/png",
-                    ".gif" => "image/gif",
-                    ".webp" => "image/webp",
-                    _ => "image/png"
-                };
-                return $"data:{mime};base64,{base64}";
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private static byte[]? TryReadFileBytes(IWebHostEnvironment env, string? relativePath)
-        {
-            var path = ResolveLocalFilePath(env, relativePath);
-            if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path)) return null;
-            try
-            {
-                return System.IO.File.ReadAllBytes(path);
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private static string? ResolveLocalFilePath(IWebHostEnvironment env, string? relativePath)
-        {
-            if (string.IsNullOrWhiteSpace(relativePath)) return null;
-            var trimmed = relativePath.TrimStart('/', '\\');
-
-            // 1) Standard static file root.
-            if (!string.IsNullOrWhiteSpace(env.WebRootPath))
-            {
-                var webRootPath = System.IO.Path.Combine(env.WebRootPath, trimmed);
-                if (System.IO.File.Exists(webRootPath)) return webRootPath;
-            }
-
-            // 2) Fallback to content root + wwwroot (covers environments with null WebRootPath).
-            if (!string.IsNullOrWhiteSpace(env.ContentRootPath))
-            {
-                var contentWwwRootPath = System.IO.Path.Combine(env.ContentRootPath, "wwwroot", trimmed);
-                if (System.IO.File.Exists(contentWwwRootPath)) return contentWwwRootPath;
-
-                // 3) Last fallback: content root direct (for non-wwwroot files).
-                var contentRootPath = System.IO.Path.Combine(env.ContentRootPath, trimmed);
-                if (System.IO.File.Exists(contentRootPath)) return contentRootPath;
-            }
-
-            return null;
-        }
-
-        private static async Task<byte[]?> TryDownloadImageBytesAsync(string baseUrl, string relativeOrAbsoluteUrl)
-        {
-            if (string.IsNullOrWhiteSpace(relativeOrAbsoluteUrl))
-                return null;
-
-            try
-            {
-                var url = relativeOrAbsoluteUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-                    ? relativeOrAbsoluteUrl
-                    : $"{baseUrl.TrimEnd('/')}/{relativeOrAbsoluteUrl.TrimStart('/')}";
-
-                using var http = new HttpClient();
-                return await http.GetByteArrayAsync(url);
-            }
-            catch
-            {
-                return null;
-            }
-        }
     }
 }

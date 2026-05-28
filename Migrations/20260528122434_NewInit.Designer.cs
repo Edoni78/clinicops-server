@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace clinicops.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260528103648_NewInitAuditLogs")]
-    partial class NewInitAuditLogs
+    [Migration("20260528122434_NewInit")]
+    partial class NewInit
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -110,15 +110,15 @@ namespace clinicops.Migrations
                         {
                             Id = "SuperAdmin",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "1e5575e8-35d9-42ee-a003-3d8b7acb1bc7",
-                            CreatedAt = new DateTime(2026, 5, 28, 10, 36, 47, 905, DateTimeKind.Utc).AddTicks(1482),
+                            ConcurrencyStamp = "e32cbe82-ba01-4a25-b818-8d3c85929516",
+                            CreatedAt = new DateTime(2026, 5, 28, 12, 24, 33, 804, DateTimeKind.Utc).AddTicks(1976),
                             Email = "superadmin@clinicops.local",
                             EmailConfirmed = true,
                             IsActive = true,
                             LockoutEnabled = false,
                             NormalizedEmail = "SUPERADMIN@CLINICOPS.LOCAL",
                             NormalizedUserName = "SUPERADMIN@CLINICOPS.LOCAL",
-                            PasswordHash = "AQAAAAIAAYagAAAAEEBWnBTJi5exVlnL2XFlpqtilQ7a/SZ9/xXsmfPNWrQkbvMnbp9of3f2yJswgWBMtw==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEKt7cd5SMlLsrdS0wzgboEahoY6NkKnu/AOfPGWeSVJ7N+s+dBtPR1xEmJVg/HS47Q==",
                             PhoneNumberConfirmed = false,
                             SecurityStamp = "STATIC-SECURITY-STAMP",
                             TwoFactorEnabled = false,
@@ -143,6 +143,10 @@ namespace clinicops.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
                     b.Property<string>("EntityId")
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
@@ -155,6 +159,14 @@ namespace clinicops.Migrations
                     b.Property<string>("IpAddress")
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
+
+                    b.Property<string>("Severity")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Status")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
 
                     b.Property<string>("UserAgent")
                         .HasMaxLength(1000)
@@ -214,7 +226,7 @@ namespace clinicops.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             Address = "123 Test Street",
                             ClinicMode = 1,
-                            CreatedAt = new DateTime(2026, 5, 28, 10, 36, 47, 940, DateTimeKind.Utc).AddTicks(3195),
+                            CreatedAt = new DateTime(2026, 5, 28, 12, 24, 33, 838, DateTimeKind.Utc).AddTicks(6686),
                             IsActive = true,
                             Name = "Default Test Clinic",
                             Phone = "+1234567890"

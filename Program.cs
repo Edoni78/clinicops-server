@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
 using ClinicOps.Application.Services.Auth;
+using ClinicOps.Application.Services.Common;
 using ClinicOps.Application.Services.Gdpr;
 using ClinicOps.Application.Services.Patient;
 using ClinicOps.Application.Services.Pdf;
@@ -29,10 +30,19 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 });
 
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+builder.Services.AddScoped<IClinicContextService, ClinicContextService>();
 builder.Services.AddScoped<IPatientService, PatientService>();
+builder.Services.AddScoped<IPatientQueryService, PatientQueryService>();
+builder.Services.AddScoped<IPatientCaseReportService, PatientCaseReportService>();
+builder.Services.AddScoped<IPatientCaseWorkflowService, PatientCaseWorkflowService>();
+builder.Services.AddScoped<IPatientCaseQueryService, PatientCaseQueryService>();
+builder.Services.AddScoped<IPatientCaseCommandService, PatientCaseCommandService>();
+builder.Services.AddScoped<IPatientCaseLabService, PatientCaseLabService>();
+builder.Services.AddScoped<IPatientCasePdfFacadeService, PatientCasePdfFacadeService>();
 builder.Services.AddScoped<ICaseReportPdfService, CaseReportPdfService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IPatientGdprService, PatientGdprService>();
+builder.Services.AddScoped<IAuditLogQueryService, AuditLogQueryService>();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()

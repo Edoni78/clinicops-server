@@ -25,6 +25,18 @@
       "PackagePath": "staticwebassets\\uploads\\clinics\\6738d068-9a9d-46f9-b4dc-813c7b557a57\\logo.png"
     },
     {
+      "Id": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\wwwroot\\uploads\\clinics\\8373c414-0899-432e-a3e3-25ad890dc8fb\\logo.png",
+      "PackagePath": "staticwebassets\\uploads\\clinics\\8373c414-0899-432e-a3e3-25ad890dc8fb\\logo.png"
+    },
+    {
+      "Id": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\wwwroot\\uploads\\doctors\\1b656eb9-9634-420d-abb1-b7927aeac75f\\signature.png",
+      "PackagePath": "staticwebassets\\uploads\\doctors\\1b656eb9-9634-420d-abb1-b7927aeac75f\\signature.png"
+    },
+    {
+      "Id": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\wwwroot\\uploads\\doctors\\1b656eb9-9634-420d-abb1-b7927aeac75f\\stamp.png",
+      "PackagePath": "staticwebassets\\uploads\\doctors\\1b656eb9-9634-420d-abb1-b7927aeac75f\\stamp.png"
+    },
+    {
       "Id": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\wwwroot\\uploads\\doctors\\374feb37-3d02-498d-ab2f-e00feaf0f129\\signature.png",
       "PackagePath": "staticwebassets\\uploads\\doctors\\374feb37-3d02-498d-ab2f-e00feaf0f129\\signature.png"
     },

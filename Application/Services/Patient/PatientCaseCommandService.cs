@@ -1,0 +1,78 @@
+using ClinicOps.API.DTOs.Vitals;
+using ClinicOps.Domain.Entities;
+using ClinicOps.Domain.Enums;
+using ClinicOps.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace ClinicOps.Application.Services.Patient
+{
+    public class PatientCaseCommandService : IPatientCaseCommandService
+    {
+        private readonly ApplicationDbContext _db;
+
+        public PatientCaseCommandService(ApplicationDbContext db)
+        {
+            _db = db;
+        }
+
+        public async Task<VitalSignsDto> SubmitVitalsAsync(Guid caseId, Guid clinicId, SubmitVitalSignsRequest request)
+        {
+            var clinicMode = await _db.Clinics
+                .Where(c => c.Id == clinicId)
+                .Select(c => c.ClinicMode)
+                .FirstOrDefaultAsync();
+            if (clinicMode == ClinicMode.SoloDoctor)
+                throw new InvalidOperationException("This clinic mode does not include nurse workflow.");
+
+            var @case = await _db.PatientCases
+                .Include(pc => pc.Patient)
+                .FirstOrDefaultAsync(pc => pc.Id == caseId && pc.ClinicId == clinicId);
+            if (@case == null)
+                throw new KeyNotFoundException("Patient case not found.");
+
+            var vitals = new VitalSigns
+            {
+                ClinicId = clinicId,
+                PatientCaseId = caseId,
+                WeightKg = request.WeightKg,
+                SystolicPressure = request.SystolicPressure,
+                DiastolicPressure = request.DiastolicPressure,
+                TemperatureC = request.TemperatureC,
+                HeartRate = request.HeartRate,
+                RecordedAt = DateTime.UtcNow
+            };
+
+            _db.VitalSigns.Add(vitals);
+            await _db.SaveChangesAsync();
+
+            return new VitalSignsDto
+            {
+                Id = vitals.Id,
+                PatientCaseId = caseId,
+                WeightKg = vitals.WeightKg,
+                SystolicPressure = vitals.SystolicPressure,
+                DiastolicPressure = vitals.DiastolicPressure,
+                TemperatureC = vitals.TemperatureC,
+                HeartRate = vitals.HeartRate,
+                RecordedAt = vitals.RecordedAt
+            };
+        }
+
+        public async Task<(Guid serviceId, string serviceName, decimal servicePrice)> AttachServiceAsync(Guid caseId, Guid clinicId, Guid serviceId)
+        {
+            var @case = await _db.PatientCases.FirstOrDefaultAsync(pc => pc.Id == caseId && pc.ClinicId == clinicId);
+            if (@case == null)
+                throw new KeyNotFoundException("Patient case not found.");
+
+            var service = await _db.Services.FirstOrDefaultAsync(s =>
+                s.Id == serviceId && s.ClinicId == clinicId && s.IsActive);
+            if (service == null)
+                throw new InvalidOperationException("Service not found, inactive, or not in this clinic.");
+
+            @case.ServiceId = service.Id;
+            await _db.SaveChangesAsync();
+
+            return (service.Id, service.Name, service.Price);
+        }
+    }
+}

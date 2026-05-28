@@ -83,7 +83,7 @@ namespace ClinicOps.Application.Services.Pdf
         {
             var sb = new StringBuilder();
             static string H(string? value) => System.Net.WebUtility.HtmlEncode(value ?? "");
-            var clinicName = H(m.ClinicName ?? "");
+            var clinicName = H((m.ClinicName ?? "").ToUpperInvariant());
             var clinicAddress = H(m.ClinicAddress ?? "—");
             var clinicPhone = H(m.ClinicPhone ?? "—");
             var patientFullName = H($"{m.PatientFirstName} {m.PatientLastName}");
@@ -101,6 +101,7 @@ namespace ClinicOps.Application.Services.Pdf
                 m.BaseUrl,
                 m.ClinicLogoUrl,
                 "https://via.placeholder.com/120x120?text=Logo");
+            var watermarkLogoSrc = BuildOptionalImageUrl(m.BaseUrl, m.ClinicLogoDataUri, m.ClinicLogoUrl);
             var signatureSrc = BuildImageUrlLikeLogo(
                 m.BaseUrl,
                 m.SignatureUrl,
@@ -124,27 +125,26 @@ namespace ClinicOps.Application.Services.Pdf
             }
             sb.Append("<style>@page{size:A4;margin:8mm;} body{margin:0;padding:0;font-family:Arial,sans-serif;} #clinic-case-report{height:279mm;overflow:hidden;} *{box-sizing:border-box;}</style></head><body>");
 
-            sb.Append("<div id='clinic-case-report' style='width:194mm; margin:0 auto; background:#ffffff; color:#1e293b; font-family:Arial, sans-serif; box-sizing:border-box; padding:14px 16px 16px 16px; line-height:1.35;'>");
-            sb.Append("<div style='display:flex; justify-content:space-between; align-items:flex-start; gap:12px; border-bottom:2px solid #dbeafe; padding-bottom:10px; margin-bottom:12px;'>");
-            sb.Append("<div style='display:flex; gap:14px; align-items:flex-start;'>");
-            sb.Append("<div style='width:78px; height:78px; flex-shrink:0;'>");
+            sb.Append("<div id='clinic-case-report' style='position:relative; width:194mm; height:279mm; margin:0 auto; background:#ffffff; color:#1e293b; font-family:Arial, sans-serif; box-sizing:border-box; padding:14px 16px 3mm 16px; line-height:1.35; overflow:hidden; display:flex; flex-direction:column;'>");
+            if (!string.IsNullOrWhiteSpace(watermarkLogoSrc))
+            {
+                sb.Append("<div aria-hidden='true' style='position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:0; pointer-events:none;'>");
+                sb.Append("<img src='").Append(watermarkLogoSrc).Append("' alt='' style='max-width:96%; max-height:92%; object-fit:contain; opacity:0.20; transform:translateX(-12%);'/>");
+                sb.Append("</div>");
+            }
+            sb.Append("<div style='position:relative; z-index:1; display:flex; flex-direction:column; flex:1; min-height:0;'>");
+            sb.Append("<div style='display:flex; justify-content:center; align-items:center; border-bottom:2px solid #dbeafe; padding-bottom:10px; margin-bottom:12px;'>");
+            sb.Append("<div style='display:flex; flex-direction:column; align-items:center; text-align:center;'>");
+            sb.Append("<div style='width:124px; height:124px; flex-shrink:0; margin-bottom:12px;'>");
             sb.Append("<img src='").Append(logoSrc).Append("' alt='Clinic Logo' style='width:100%; height:100%; object-fit:contain; display:block;'/>");
             sb.Append("</div>");
-            sb.Append("<div>");
-            sb.Append("<h1 style='margin:0 0 3px 0; font-size:20px; color:#0f172a;'>").Append(clinicName).Append("</h1>");
-            sb.Append("<p style='margin:0; font-size:12px; color:#475569;'>").Append(clinicAddress).Append("</p>");
-            sb.Append("<p style='margin:1px 0 0 0; font-size:12px; color:#475569;'>Tel: ").Append(clinicPhone).Append("</p>");
-            sb.Append("</div></div>");
-            sb.Append("<div style='min-width:200px; border:1px solid #cbd5e1; border-radius:10px; padding:8px 10px; background:#f8fafc;'>");
-            sb.Append("<div style='font-size:11px; color:#64748b; margin-bottom:4px;'>Detajet e raportit</div>");
-            sb.Append("<div style='font-size:12px; color:#0f172a; margin-bottom:2px;'>Data: ").Append(reportDate).Append("</div>");
-            sb.Append("<div style='font-size:12px; color:#0f172a; margin-bottom:2px;'>Ora: ").Append(reportTime).Append("</div>");
-            sb.Append("<div style='font-size:12px; color:#0f172a;'>Mjeku: ").Append(doctorName).Append("</div>");
-            sb.Append("</div></div>");
+            sb.Append("<h1 style='margin:0 0 8px 0; font-size:24px; color:#0f172a; line-height:1.2;'>").Append(clinicName).Append("</h1>");
+            sb.Append("</div>");
+            sb.Append("</div>");
 
             sb.Append("<div style='text-align:center; margin-bottom:12px;'>");
-            sb.Append("<h2 style='margin:0; font-size:18px; color:#0f172a; letter-spacing:0.2px;'>Raport i Rastit Mjekësor</h2>");
-            sb.Append("<p style='margin:4px 0 0 0; font-size:11px; color:#64748b;'>Dokument zyrtar i konsultës dhe gjetjeve mjekësore</p>");
+            sb.Append("<h2 style='margin:0; font-size:18px; color:#0f172a; letter-spacing:0.2px;'>RAPORT SPECIALISTIK</h2>");
+            // sb.Append("<p style='margin:4px 0 0 0; font-size:11px; color:#64748b;'>Dokument zyrtar i konsultës dhe gjetjeve mjekësore</p>");
             sb.Append("</div>");
 
             sb.Append("<div style='border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; margin-bottom:10px;'>");
@@ -154,7 +154,7 @@ namespace ClinicOps.Application.Services.Pdf
             sb.Append("<div style='display:flex; justify-content:space-between; gap:12px; padding:7px 12px; border-bottom:1px solid #e2e8f0;'><span style='font-size:12px; color:#64748b;'>Gjinia</span><span style='font-size:12px; color:#0f172a;'>").Append(patientGender).Append("</span></div>");
             sb.Append("<div style='display:flex; justify-content:space-between; gap:12px; padding:7px 12px; border-bottom:1px solid #e2e8f0;'><span style='font-size:12px; color:#64748b;'>Data e lindjes</span><span style='font-size:12px; color:#0f172a;'>").Append(patientDob).Append("</span></div>");
             sb.Append("<div style='display:flex; justify-content:space-between; gap:12px; padding:7px 12px; border-bottom:1px solid #e2e8f0;'><span style='font-size:12px; color:#64748b;'>Telefoni</span><span style='font-size:12px; color:#0f172a;'>").Append(patientPhone).Append("</span></div>");
-            sb.Append("<div style='display:flex; justify-content:space-between; gap:12px; padding:7px 12px;'><span style='font-size:12px; color:#64748b;'>Statusi i rastit</span><span style='font-size:12px; color:#0f172a;'>").Append(caseStatus).Append("</span></div>");
+            // sb.Append("<div style='display:flex; justify-content:space-between; gap:12px; padding:7px 12px;'><span style='font-size:12px; color:#64748b;'>Statusi i rastit</span><span style='font-size:12px; color:#0f172a;'>").Append(caseStatus).Append("</span></div>");
             sb.Append("</div></div>");
 
             sb.Append("<div style='border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; margin-bottom:10px;'>");
@@ -187,7 +187,18 @@ namespace ClinicOps.Application.Services.Pdf
             sb.Append("<img src='").Append(stampSrc).Append("' alt='Vula' style='max-width:100%; max-height:64px; object-fit:contain; display:block;'/>");
             sb.Append("</div><div style='margin-top:6px; border-top:1px solid #cbd5e1; padding-top:5px; text-align:center; font-size:11px; color:#0f172a;'>").Append(clinicName).Append("</div></div>");
             sb.Append("</div></div>");
+            sb.Append("<div style='margin-top:auto; padding-top:6px; border-top:1px solid #cbd5e1; font-size:11px; color:#334155; display:flex; flex-wrap:wrap; gap:12px;'>");
+            // sb.Append("<span><strong>Detajet e raportit:</strong></span>");
+            sb.Append("<span>Data: ").Append(reportDate).Append("</span>");
+            sb.Append("<span>Ora: ").Append(reportTime).Append("</span>");
+            sb.Append("<span>Mjeku: ").Append(doctorName).Append("</span>");
+            sb.Append("<span>|</span>");
+            sb.Append("<span><strong>Klinika:</strong> ").Append(clinicName).Append("</span>");
+            sb.Append("<span>Adresa: ").Append(clinicAddress).Append("</span>");
+            sb.Append("<span>Tel: ").Append(clinicPhone).Append("</span>");
+            sb.Append("</div>");
 
+            sb.Append("</div>");
             sb.Append("</div></body></html>");
 
             return sb.ToString();
@@ -208,6 +219,28 @@ namespace ClinicOps.Application.Services.Pdf
                 return System.Net.WebUtility.HtmlEncode(combined.ToString());
 
             return System.Net.WebUtility.HtmlEncode(normalized);
+        }
+
+        private static string? BuildOptionalImageUrl(string? baseUrl, params string?[] candidates)
+        {
+            foreach (var candidate in candidates)
+            {
+                if (string.IsNullOrWhiteSpace(candidate))
+                    continue;
+
+                var normalized = NormalizeUrlPath(candidate.Trim());
+                if (Uri.TryCreate(normalized, UriKind.Absolute, out var absolute))
+                    return System.Net.WebUtility.HtmlEncode(absolute.ToString());
+
+                if (!string.IsNullOrWhiteSpace(baseUrl) &&
+                    Uri.TryCreate(baseUrl.TrimEnd('/') + "/", UriKind.Absolute, out var baseUri) &&
+                    Uri.TryCreate(baseUri, normalized.TrimStart('/'), out var combined))
+                    return System.Net.WebUtility.HtmlEncode(combined.ToString());
+
+                return System.Net.WebUtility.HtmlEncode(normalized);
+            }
+
+            return null;
         }
 
         private static string NormalizeUrlPath(string url) => url.Replace("\\", "/");
