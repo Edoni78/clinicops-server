@@ -4,9 +4,11 @@ using ClinicOps.Application.Services.Gdpr;
 using ClinicOps.Domain.Entities;
 using ClinicOps.Domain.Enums;
 using ClinicOps.Infrastructure.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace ClinicOps.API.Controllers
 {
@@ -16,21 +18,21 @@ namespace ClinicOps.API.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly IJwtTokenService _jwt;
+        private readonly IAuthLoginService _authLoginService;
+        private readonly IAuthMfaService _authMfaService;
         private readonly IAuditLogService _auditLogService;
 
         public AuthController(
             ApplicationDbContext db,
             UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
-            IJwtTokenService jwt,
+            IAuthLoginService authLoginService,
+            IAuthMfaService authMfaService,
             IAuditLogService auditLogService)
         {
             _db = db;
             _userManager = userManager;
-            _signInManager = signInManager;
-            _jwt = jwt;
+            _authLoginService = authLoginService;
+            _authMfaService = authMfaService;
             _auditLogService = auditLogService;
         }
 
@@ -41,72 +43,67 @@ namespace ClinicOps.API.Controllers
         public async Task<ActionResult<AuthResponse>> Login(
             [FromBody] LoginRequest request)
         {
-            var user = await _userManager.Users
-                .Include(u => u.Clinic)
-                .FirstOrDefaultAsync(u => u.Email == request.Email);
-
-            if (user == null)
+            try
             {
-                await _auditLogService.TryLogAsync(
-                    action: "FailedLogin",
-                    entityName: "Auth",
-                    entityId: null,
-                    clinicId: null,
-                    userId: null,
-                    status: "Failed",
-                    severity: "Warning",
-                    description: $"Failed login attempt for email {request.Email}.");
-                return Unauthorized("Invalid email or password.");
+                var response = await _authLoginService.LoginAsync(request);
+                return Ok(response);
             }
-
-            var validPassword =
-                await _signInManager.CheckPasswordSignInAsync(
-                    user,
-                    request.Password,
-                    lockoutOnFailure: false
-                );
-
-            if (!validPassword.Succeeded)
+            catch (UnauthorizedAccessException ex)
             {
-                await _auditLogService.TryLogAsync(
-                    action: "FailedLogin",
-                    entityName: "Auth",
-                    entityId: null,
-                    clinicId: user.ClinicId,
-                    userId: user.Id,
-                    status: "Failed",
-                    severity: "Warning",
-                    description: $"Failed login attempt for user {user.Email}.");
-                return Unauthorized("Invalid email or password.");
+                return Unauthorized(ex.Message);
             }
+        }
 
-            var roles = await _userManager.GetRolesAsync(user);
-
-            // ✅ CAPTURE ALL 3 VALUES
-            var (token, exp, role) = _jwt.CreateToken(user, roles);
-            await _auditLogService.TryLogAsync(
-                action: "Login",
-                entityName: "Auth",
-                entityId: null,
-                clinicId: user.ClinicId,
-                userId: user.Id,
-                status: "Success",
-                severity: "Info",
-                description: "User logged into the system successfully.");
-
-            return Ok(new AuthResponse
+        [HttpPost("mfa/verify-login")]
+        public async Task<ActionResult<AuthResponse>> VerifyLoginMfa([FromBody] VerifyLoginMfaRequest request)
+        {
+            try
             {
-                AccessToken = token,
-                ExpiresAtUtc = exp,
-                User = new AuthClinicUserDto
-                {
-                    Id = user.Id,
-                    Email = user.Email!,
-                    ClinicId = user.ClinicId?.ToString(),
-                    ClinicName = user.Clinic?.Name,
-                    Role = role
-                }
-            });
+                var response = await _authLoginService.VerifyMfaLoginAsync(request);
+                return Ok(response);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+        }
+
+        [HttpPost("mfa/setup")]
+        [Authorize]
+        public async Task<ActionResult<MfaSetupResponse>> GenerateMfaSetup()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
+            if (string.IsNullOrWhiteSpace(userId))
+                return Unauthorized();
+
+            try
+            {
+                var setup = await _authMfaService.GenerateSetupAsync(userId);
+                return Ok(setup);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("mfa/enable")]
+        [Authorize]
+        public async Task<ActionResult<MfaEnabledResponse>> EnableMfa([FromBody] VerifyMfaCodeRequest request)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
+            if (string.IsNullOrWhiteSpace(userId))
+                return Unauthorized();
+
+            try
+            {
+                var result = await _authMfaService.EnableAsync(userId, request.Code);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         // =====================================================

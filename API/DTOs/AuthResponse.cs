@@ -2,8 +2,10 @@
 {
     public class AuthResponse
     {
-        public string AccessToken { get; set; } = null!;
-        public DateTime ExpiresAtUtc { get; set; }
-        public AuthClinicUserDto User { get; set; } = null!;
+        public string? AccessToken { get; set; }
+        public DateTime? ExpiresAtUtc { get; set; }
+        public AuthClinicUserDto? User { get; set; }
+        public bool RequiresMfa { get; set; }
+        public string? MfaTicket { get; set; }
     }
 }
