@@ -8,6 +8,7 @@ namespace ClinicOps.API.DTOs.PatientCase
         public string PatientLastName { get; set; } = null!;
         public string Status { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
+        public DateTime? CompletedAt { get; set; }
         public Guid? ServiceId { get; set; }
         public string? ServiceName { get; set; }
         public decimal? ServicePrice { get; set; }

@@ -12,6 +12,8 @@ namespace ClinicOps.Application.Services.Pdf
         public string? ClinicPhone { get; set; }
         /// <summary>Relative URL of clinic logo image (e.g. /uploads/clinics/{clinicId}/logo.png).</summary>
         public string? ClinicLogoUrl { get; set; }
+        /// <summary>Clinic logo image as data URI for robust PDF rendering.</summary>
+        public string? ClinicLogoDataUri { get; set; }
         public string PatientFirstName { get; set; } = null!;
         public string PatientLastName { get; set; } = null!;
         public DateTime? PatientDateOfBirth { get; set; }
@@ -34,6 +36,10 @@ namespace ClinicOps.Application.Services.Pdf
         public string? SignatureDataUri { get; set; }
         /// <summary>Stamp image as data URI so PDF renders without loading URL.</summary>
         public string? StampDataUri { get; set; }
+        /// <summary>Fallback raw signature bytes if data URI parsing is not available.</summary>
+        public byte[]? SignatureBytes { get; set; }
+        /// <summary>Fallback raw stamp bytes if data URI parsing is not available.</summary>
+        public byte[]? StampBytes { get; set; }
     }
 
     public class VitalsModel

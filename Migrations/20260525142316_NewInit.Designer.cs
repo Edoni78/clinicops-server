@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace clinicops.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260224220521_AddAnamnezaToMedicalReport")]
-    partial class AddAnamnezaToMedicalReport
+    [Migration("20260525142316_NewInit")]
+    partial class NewInit
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -39,6 +39,9 @@ namespace clinicops.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DoctorDisplayName")
+                        .HasColumnType("longtext");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -76,6 +79,12 @@ namespace clinicops.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("longtext");
 
+                    b.Property<string>("SignatureUrl")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("StampUrl")
+                        .HasColumnType("longtext");
+
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("tinyint(1)");
 
@@ -101,15 +110,15 @@ namespace clinicops.Migrations
                         {
                             Id = "SuperAdmin",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "6fe235a4-4b72-49f1-8f78-0ed12ba60f0e",
-                            CreatedAt = new DateTime(2026, 2, 24, 22, 5, 21, 269, DateTimeKind.Utc).AddTicks(9796),
+                            ConcurrencyStamp = "a8be5ed3-0a4c-416a-8361-5d887ee1a1cc",
+                            CreatedAt = new DateTime(2026, 5, 25, 14, 23, 16, 554, DateTimeKind.Utc).AddTicks(3152),
                             Email = "superadmin@clinicops.local",
                             EmailConfirmed = true,
                             IsActive = true,
                             LockoutEnabled = false,
                             NormalizedEmail = "SUPERADMIN@CLINICOPS.LOCAL",
                             NormalizedUserName = "SUPERADMIN@CLINICOPS.LOCAL",
-                            PasswordHash = "AQAAAAIAAYagAAAAEL7foHpASyUCJJYVTL2yTuKrizxrBAD1OAAUOu3/85dbkLU41/M60BozKZx0kmr6Qg==",
+                            PasswordHash = "AQAAAAIAAYagAAAAENSAN+oYvU96wuFF4pwf7quX1y0dx+GgomZl1g66INF/WRp0yyReaQaX/a9FovTD8A==",
                             PhoneNumberConfirmed = false,
                             SecurityStamp = "STATIC-SECURITY-STAMP",
                             TwoFactorEnabled = false,
@@ -126,6 +135,9 @@ namespace clinicops.Migrations
                     b.Property<string>("Address")
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)");
+
+                    b.Property<int>("ClinicMode")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
@@ -159,7 +171,8 @@ namespace clinicops.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             Address = "123 Test Street",
-                            CreatedAt = new DateTime(2026, 2, 24, 22, 5, 21, 306, DateTimeKind.Utc).AddTicks(7281),
+                            ClinicMode = 1,
+                            CreatedAt = new DateTime(2026, 5, 25, 14, 23, 16, 589, DateTimeKind.Utc).AddTicks(1626),
                             IsActive = true,
                             Name = "Default Test Clinic",
                             Phone = "+1234567890"
@@ -179,6 +192,9 @@ namespace clinicops.Migrations
                     b.Property<string>("AdminPasswordHash")
                         .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<int>("ClinicMode")
+                        .HasColumnType("int");
 
                     b.Property<string>("ClinicName")
                         .IsRequired()
@@ -230,8 +246,9 @@ namespace clinicops.Migrations
                     b.Property<DateTime>("UploadedAt")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<Guid>("UploadedById")
-                        .HasColumnType("char(36)");
+                    b.Property<string>("UploadedById")
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
 
                     b.HasKey("Id");
 
@@ -351,6 +368,9 @@ namespace clinicops.Migrations
                     b.Property<Guid>("PatientId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("ServiceId")
+                        .HasColumnType("char(36)");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -359,6 +379,8 @@ namespace clinicops.Migrations
                     b.HasIndex("ClinicId");
 
                     b.HasIndex("PatientId");
+
+                    b.HasIndex("ServiceId");
 
                     b.ToTable("PatientCases");
                 });
@@ -396,6 +418,36 @@ namespace clinicops.Migrations
                         .IsUnique();
 
                     b.ToTable("Payments");
+                });
+
+            modelBuilder.Entity("ClinicOps.Domain.Entities.Service", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("ClinicId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClinicId");
+
+                    b.ToTable("Services");
                 });
 
             modelBuilder.Entity("ClinicOps.Domain.Entities.VitalSigns", b =>
@@ -653,9 +705,16 @@ namespace clinicops.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("ClinicOps.Domain.Entities.Service", "Service")
+                        .WithMany()
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Clinic");
 
                     b.Navigation("Patient");
+
+                    b.Navigation("Service");
                 });
 
             modelBuilder.Entity("ClinicOps.Domain.Entities.Payment", b =>
@@ -675,6 +734,17 @@ namespace clinicops.Migrations
                     b.Navigation("Clinic");
 
                     b.Navigation("PatientCase");
+                });
+
+            modelBuilder.Entity("ClinicOps.Domain.Entities.Service", b =>
+                {
+                    b.HasOne("ClinicOps.Domain.Entities.Clinic", "Clinic")
+                        .WithMany()
+                        .HasForeignKey("ClinicId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Clinic");
                 });
 
             modelBuilder.Entity("ClinicOps.Domain.Entities.VitalSigns", b =>

@@ -45,12 +45,13 @@ namespace ClinicOps.API.Controllers
         {
             var (_, clinicId) = await ResolveClinicIdAsync();
             var query = _db.PatientCases
-                .Include(pc => pc.Patient)
+                .AsNoTracking()
                 .Where(pc => pc.ClinicId == clinicId);
 
             if (!string.IsNullOrEmpty(status) && Enum.TryParse<PatientCaseStatus>(status, ignoreCase: true, out var statusEnum))
                 query = query.Where(pc => pc.Status == statusEnum);
 
+            // Project Patient + Service in one query (do not Include only Patient — Service join can be dropped).
             var list = await query
                 .OrderByDescending(pc => pc.CreatedAt)
                 .Select(pc => new PatientCaseListItemDto
@@ -61,9 +62,10 @@ namespace ClinicOps.API.Controllers
                     PatientLastName = pc.Patient.LastName,
                     Status = pc.Status.ToString(),
                     CreatedAt = pc.CreatedAt,
+                    CompletedAt = pc.CompletedAt,
                     ServiceId = pc.ServiceId,
-                    ServiceName = pc.Service != null ? pc.Service.Name : null,
-                    ServicePrice = pc.Service != null ? pc.Service.Price : null
+                    ServiceName = pc.ServiceId != null ? pc.Service!.Name : null,
+                    ServicePrice = pc.ServiceId != null ? pc.Service!.Price : null
                 })
                 .ToListAsync();
 
@@ -276,6 +278,16 @@ namespace ClinicOps.API.Controllers
             if (@case == null)
                 return NotFound("Patient case not found.");
 
+            if (statusEnum == PatientCaseStatus.InConsultation)
+            {
+                var anotherInConsultation = await _db.PatientCases.AnyAsync(pc =>
+                    pc.ClinicId == clinicId
+                    && pc.Id != id
+                    && pc.Status == PatientCaseStatus.InConsultation);
+                if (anotherInConsultation)
+                    return BadRequest("Mjeku ka tashmë një pacient në konsultim. Përfundoni vizitën aktuale para se të hapni një tjetër.");
+            }
+
             @case.Status = statusEnum;
             if (statusEnum == PatientCaseStatus.Completed || statusEnum == PatientCaseStatus.Finished)
                 @case.CompletedAt = DateTime.UtcNow;
@@ -358,10 +370,20 @@ namespace ClinicOps.API.Controllers
             string? stampUrl = null;
             string? signatureDataUri = null;
             string? stampDataUri = null;
-            if (report != null && !string.IsNullOrEmpty(report.DoctorUserId))
+            byte[]? signatureBytes = null;
+            byte[]? stampBytes = null;
+            var resolvedDoctorUserId = report?.DoctorUserId;
+            if (string.IsNullOrWhiteSpace(resolvedDoctorUserId))
+            {
+                // Backward-compatible fallback: for older rows where DoctorUserId was not populated.
+                resolvedDoctorUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                    ?? User.FindFirst("sub")?.Value;
+            }
+
+            if (!string.IsNullOrWhiteSpace(resolvedDoctorUserId))
             {
                 var doctorUser = await _db.Users.AsNoTracking()
-                    .FirstOrDefaultAsync(u => u.Id == report.DoctorUserId);
+                    .FirstOrDefaultAsync(u => u.Id == resolvedDoctorUserId);
                 if (doctorUser != null)
                 {
                     doctorDisplayName = doctorUser.DoctorDisplayName ?? doctorUser.Email;
@@ -369,10 +391,16 @@ namespace ClinicOps.API.Controllers
                     stampUrl = doctorUser.StampUrl;
                     signatureDataUri = TryReadFileAsDataUri(_env, signatureUrl);
                     stampDataUri = TryReadFileAsDataUri(_env, stampUrl);
+                    signatureBytes = TryReadFileBytes(_env, signatureUrl);
+                    stampBytes = TryReadFileBytes(_env, stampUrl);
                 }
             }
 
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
+            if (signatureBytes == null && !string.IsNullOrWhiteSpace(signatureUrl))
+                signatureBytes = await TryDownloadImageBytesAsync(baseUrl, signatureUrl);
+            if (stampBytes == null && !string.IsNullOrWhiteSpace(stampUrl))
+                stampBytes = await TryDownloadImageBytesAsync(baseUrl, stampUrl);
 
             var model = new PatientCaseReportModel
             {
@@ -380,6 +408,7 @@ namespace ClinicOps.API.Controllers
                 ClinicAddress = @case.Clinic?.Address,
                 ClinicPhone = @case.Clinic?.Phone,
                 ClinicLogoUrl = @case.Clinic?.LogoUrl,
+                ClinicLogoDataUri = TryReadFileAsDataUri(_env, @case.Clinic?.LogoUrl),
                 PatientFirstName = @case.Patient.FirstName,
                 PatientLastName = @case.Patient.LastName,
                 PatientDateOfBirth = @case.Patient.DateOfBirth,
@@ -409,7 +438,9 @@ namespace ClinicOps.API.Controllers
                 SignatureUrl = signatureUrl,
                 StampUrl = stampUrl,
                 SignatureDataUri = signatureDataUri,
-                StampDataUri = stampDataUri
+                StampDataUri = stampDataUri,
+                SignatureBytes = signatureBytes,
+                StampBytes = stampBytes
             };
 
             var pdfBytes = await _pdfService.GenerateCaseReportPdfAsync(model);
@@ -607,11 +638,8 @@ namespace ClinicOps.API.Controllers
 
         private static string? TryReadFileAsDataUri(IWebHostEnvironment env, string? relativePath)
         {
-            if (string.IsNullOrWhiteSpace(relativePath)) return null;
-            var root = env.WebRootPath ?? env.ContentRootPath;
-            if (string.IsNullOrEmpty(root)) return null;
-            var path = System.IO.Path.Combine(root, relativePath.TrimStart('/', '\\'));
-            if (!System.IO.File.Exists(path)) return null;
+            var path = ResolveLocalFilePath(env, relativePath);
+            if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path)) return null;
             try
             {
                 var bytes = System.IO.File.ReadAllBytes(path);
@@ -626,6 +654,66 @@ namespace ClinicOps.API.Controllers
                     _ => "image/png"
                 };
                 return $"data:{mime};base64,{base64}";
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static byte[]? TryReadFileBytes(IWebHostEnvironment env, string? relativePath)
+        {
+            var path = ResolveLocalFilePath(env, relativePath);
+            if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path)) return null;
+            try
+            {
+                return System.IO.File.ReadAllBytes(path);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static string? ResolveLocalFilePath(IWebHostEnvironment env, string? relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath)) return null;
+            var trimmed = relativePath.TrimStart('/', '\\');
+
+            // 1) Standard static file root.
+            if (!string.IsNullOrWhiteSpace(env.WebRootPath))
+            {
+                var webRootPath = System.IO.Path.Combine(env.WebRootPath, trimmed);
+                if (System.IO.File.Exists(webRootPath)) return webRootPath;
+            }
+
+            // 2) Fallback to content root + wwwroot (covers environments with null WebRootPath).
+            if (!string.IsNullOrWhiteSpace(env.ContentRootPath))
+            {
+                var contentWwwRootPath = System.IO.Path.Combine(env.ContentRootPath, "wwwroot", trimmed);
+                if (System.IO.File.Exists(contentWwwRootPath)) return contentWwwRootPath;
+
+                // 3) Last fallback: content root direct (for non-wwwroot files).
+                var contentRootPath = System.IO.Path.Combine(env.ContentRootPath, trimmed);
+                if (System.IO.File.Exists(contentRootPath)) return contentRootPath;
+            }
+
+            return null;
+        }
+
+        private static async Task<byte[]?> TryDownloadImageBytesAsync(string baseUrl, string relativeOrAbsoluteUrl)
+        {
+            if (string.IsNullOrWhiteSpace(relativeOrAbsoluteUrl))
+                return null;
+
+            try
+            {
+                var url = relativeOrAbsoluteUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                    ? relativeOrAbsoluteUrl
+                    : $"{baseUrl.TrimEnd('/')}/{relativeOrAbsoluteUrl.TrimStart('/')}";
+
+                using var http = new HttpClient();
+                return await http.GetByteArrayAsync(url);
             }
             catch
             {

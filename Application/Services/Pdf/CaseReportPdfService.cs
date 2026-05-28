@@ -29,8 +29,38 @@ namespace ClinicOps.Application.Services.Pdf
             });
 
             await using var page = await browser.NewPageAsync();
-            await page.SetContentAsync(html);
-            await Task.Delay(500);
+            page.DefaultNavigationTimeout = 120000;
+            await page.SetContentAsync(
+                html,
+                new NavigationOptions
+                {
+                    Timeout = 120000,
+                    WaitUntil = new[] { WaitUntilNavigation.DOMContentLoaded }
+                });
+            // Wait for image load/error events without failing the whole PDF request.
+            await page.EvaluateExpressionAsync(
+                @"new Promise(resolve => {
+                    const imgs = Array.from(document.images);
+                    if (imgs.length === 0) { resolve(true); return; }
+
+                    let done = 0;
+                    const finishOne = () => {
+                        done++;
+                        if (done >= imgs.length) resolve(true);
+                    };
+
+                    imgs.forEach(img => {
+                        if (img.complete) {
+                            finishOne();
+                            return;
+                        }
+                        img.addEventListener('load', finishOne, { once: true });
+                        img.addEventListener('error', finishOne, { once: true });
+                    });
+
+                    // Safety: never hang forever.
+                    setTimeout(() => resolve(true), 2000);
+                })");
 
             var pdfBytes = await page.PdfDataAsync(new PdfOptions
             {
@@ -67,19 +97,18 @@ namespace ClinicOps.Application.Services.Pdf
             var anamneza = H(m.MedicalReport?.Anamneza ?? "");
             var diagnosis = H(m.MedicalReport?.Diagnosis ?? "");
             var therapy = H(m.MedicalReport?.Therapy ?? "");
-            var logoSrc = !string.IsNullOrWhiteSpace(m.ClinicLogoUrl)
-                ? H(m.ClinicLogoUrl!)
-                : "https://via.placeholder.com/120x120?text=Logo";
-            var signatureSrc = !string.IsNullOrWhiteSpace(m.SignatureDataUri)
-                ? m.SignatureDataUri
-                : (!string.IsNullOrWhiteSpace(m.SignatureUrl)
-                    ? H(m.SignatureUrl!)
-                    : "https://via.placeholder.com/220x80?text=Signature");
-            var stampSrc = !string.IsNullOrWhiteSpace(m.StampDataUri)
-                ? m.StampDataUri
-                : (!string.IsNullOrWhiteSpace(m.StampUrl)
-                    ? H(m.StampUrl!)
-                    : "https://via.placeholder.com/120x120?text=Stamp");
+            var logoSrc = BuildImageUrlLikeLogo(
+                m.BaseUrl,
+                m.ClinicLogoUrl,
+                "https://via.placeholder.com/120x120?text=Logo");
+            var signatureSrc = BuildImageUrlLikeLogo(
+                m.BaseUrl,
+                m.SignatureUrl,
+                "https://via.placeholder.com/220x80?text=Signature");
+            var stampSrc = BuildImageUrlLikeLogo(
+                m.BaseUrl,
+                m.StampUrl,
+                "https://via.placeholder.com/120x120?text=Stamp");
             var weight = m.LatestVitals?.WeightKg.HasValue == true ? $"{m.LatestVitals.WeightKg.Value:F1} kg" : "—";
             var bp = (m.LatestVitals?.SystolicPressure.HasValue == true || m.LatestVitals?.DiastolicPressure.HasValue == true)
                 ? $"{m.LatestVitals?.SystolicPressure ?? 0} / {m.LatestVitals?.DiastolicPressure ?? 0} mmHg"
@@ -163,5 +192,25 @@ namespace ClinicOps.Application.Services.Pdf
 
             return sb.ToString();
         }
+
+        private static string BuildImageUrlLikeLogo(string? baseUrl, string? relativeOrAbsoluteUrl, string placeholder)
+        {
+            if (string.IsNullOrWhiteSpace(relativeOrAbsoluteUrl))
+                return placeholder;
+
+            var normalized = NormalizeUrlPath(relativeOrAbsoluteUrl.Trim());
+            if (Uri.TryCreate(normalized, UriKind.Absolute, out var absolute))
+                return System.Net.WebUtility.HtmlEncode(absolute.ToString());
+
+            if (!string.IsNullOrWhiteSpace(baseUrl) &&
+                Uri.TryCreate(baseUrl.TrimEnd('/') + "/", UriKind.Absolute, out var baseUri) &&
+                Uri.TryCreate(baseUri, normalized.TrimStart('/'), out var combined))
+                return System.Net.WebUtility.HtmlEncode(combined.ToString());
+
+            return System.Net.WebUtility.HtmlEncode(normalized);
+        }
+
+        private static string NormalizeUrlPath(string url) => url.Replace("\\", "/");
+
     }
 }

@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "114OUNen/MgflA7qs+De8qTnTVHVz3qcq5Wet5iVau0=",
+  "Hash": "Mm48fwL60b4jHY+bgTCY/kqNI3YuKWzm6Dz9AfkuAGE=",
   "Source": "clinicops",
   "BasePath": "_content/clinicops",
   "Mode": "Default",
@@ -110,6 +110,25 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\uploads\\clinics\\3d52c024-c620-400a-a225-f530ef707c78\\logo.png"
+    },
+    {
+      "Identity": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\wwwroot\\uploads\\clinics\\6738d068-9a9d-46f9-b4dc-813c7b557a57\\logo.png",
+      "SourceId": "clinicops",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\wwwroot\\",
+      "BasePath": "_content/clinicops",
+      "RelativePath": "uploads/clinics/6738d068-9a9d-46f9-b4dc-813c7b557a57/logo.png",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\clinics\\6738d068-9a9d-46f9-b4dc-813c7b557a57\\logo.png"
     },
     {
       "Identity": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\wwwroot\\uploads\\doctors\\374feb37-3d02-498d-ab2f-e00feaf0f129\\signature.png",
@@ -243,6 +262,44 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\uploads\\doctors\\d0c6e152-5014-4902-9a8d-1bf04df1ade7\\stamp.png"
+    },
+    {
+      "Identity": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\wwwroot\\uploads\\doctors\\fdd9c068-01a3-4d34-b2f6-34bc9ace758d\\signature.png",
+      "SourceId": "clinicops",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\wwwroot\\",
+      "BasePath": "_content/clinicops",
+      "RelativePath": "uploads/doctors/fdd9c068-01a3-4d34-b2f6-34bc9ace758d/signature.png",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\doctors\\fdd9c068-01a3-4d34-b2f6-34bc9ace758d\\signature.png"
+    },
+    {
+      "Identity": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\wwwroot\\uploads\\doctors\\fdd9c068-01a3-4d34-b2f6-34bc9ace758d\\stamp.png",
+      "SourceId": "clinicops",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\wwwroot\\",
+      "BasePath": "_content/clinicops",
+      "RelativePath": "uploads/doctors/fdd9c068-01a3-4d34-b2f6-34bc9ace758d/stamp.png",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\doctors\\fdd9c068-01a3-4d34-b2f6-34bc9ace758d\\stamp.png"
     }
   ]
 }
