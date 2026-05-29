@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace clinicops.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260529050649_SimplifyPatientCaseStatus")]
-    partial class SimplifyPatientCaseStatus
+    [Migration("20260529085528_NewInit")]
+    partial class NewInit
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -110,15 +110,15 @@ namespace clinicops.Migrations
                         {
                             Id = "SuperAdmin",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "1299eb6f-c8fe-457e-b62c-b56868fa4d47",
-                            CreatedAt = new DateTime(2026, 5, 29, 5, 6, 48, 728, DateTimeKind.Utc).AddTicks(2283),
+                            ConcurrencyStamp = "224fabb6-0bb8-4c16-aa8d-0c92ac2806f3",
+                            CreatedAt = new DateTime(2026, 5, 29, 8, 55, 28, 39, DateTimeKind.Utc).AddTicks(590),
                             Email = "superadmin@clinicops.local",
                             EmailConfirmed = true,
                             IsActive = true,
                             LockoutEnabled = false,
                             NormalizedEmail = "SUPERADMIN@CLINICOPS.LOCAL",
                             NormalizedUserName = "SUPERADMIN@CLINICOPS.LOCAL",
-                            PasswordHash = "AQAAAAIAAYagAAAAEA2ulCs24Y2poSNyadGvsJIwIR77g5rGlgQztQOZ0vlJJToP47tEPh/ArJk/0d2kOg==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEOgPgjzGJPGbk/5LoLilliBQdwM5nLXX5waW7E3DkwaIr8c3MQiqyHp2b7u4iy8W8g==",
                             PhoneNumberConfirmed = false,
                             SecurityStamp = "STATIC-SECURITY-STAMP",
                             TwoFactorEnabled = false,
@@ -226,7 +226,7 @@ namespace clinicops.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             Address = "123 Test Street",
                             ClinicMode = 1,
-                            CreatedAt = new DateTime(2026, 5, 29, 5, 6, 48, 767, DateTimeKind.Utc).AddTicks(1313),
+                            CreatedAt = new DateTime(2026, 5, 29, 8, 55, 28, 74, DateTimeKind.Utc).AddTicks(3196),
                             IsActive = true,
                             Name = "Default Test Clinic",
                             Phone = "+1234567890"

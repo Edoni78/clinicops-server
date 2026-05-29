@@ -131,7 +131,7 @@ namespace ClinicOps.API.Controllers
         /// Doctor: submit or update diagnosis and therapy for a patient case. Broadcasts via SignalR.
         /// </summary>
         [HttpPost("{id:guid}/report")]
-        [Authorize(Roles = "Doctor,SuperAdmin")]
+        [Authorize(Roles = "Doctor,ClinicAdmin,SuperAdmin")]
         [ProducesResponseType(typeof(MedicalReportDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -167,7 +167,7 @@ namespace ClinicOps.API.Controllers
         /// Doctor: read EMR report for a case.
         /// </summary>
         [HttpGet("{id:guid}/report")]
-        [Authorize(Roles = "Doctor,SuperAdmin")]
+        [Authorize(Roles = "Doctor,ClinicAdmin,SuperAdmin")]
         [ProducesResponseType(typeof(MedicalReportDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<MedicalReportDto>> GetReport(Guid id)
@@ -189,7 +189,7 @@ namespace ClinicOps.API.Controllers
         /// Doctor: delete EMR report for a case.
         /// </summary>
         [HttpDelete("{id:guid}/report")]
-        [Authorize(Roles = "Doctor,SuperAdmin")]
+        [Authorize(Roles = "Doctor,ClinicAdmin,SuperAdmin")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteReport(Guid id)

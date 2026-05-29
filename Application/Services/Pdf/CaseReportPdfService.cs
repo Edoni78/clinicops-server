@@ -191,9 +191,9 @@ namespace ClinicOps.Application.Services.Pdf
             // sb.Append("<span><strong>Detajet e raportit:</strong></span>");
             sb.Append("<span>Data: ").Append(reportDate).Append("</span>");
             sb.Append("<span>Ora: ").Append(reportTime).Append("</span>");
-            sb.Append("<span>Mjeku: ").Append(doctorName).Append("</span>");
+            // sb.Append("<span>Mjeku: ").Append(doctorName).Append("</span>");
             sb.Append("<span>|</span>");
-            sb.Append("<span><strong>Klinika:</strong> ").Append(clinicName).Append("</span>");
+            // sb.Append("<span><strong>Klinika:</strong> ").Append(clinicName).Append("</span>");
             sb.Append("<span>Adresa: ").Append(clinicAddress).Append("</span>");
             sb.Append("<span>Tel: ").Append(clinicPhone).Append("</span>");
             sb.Append("</div>");

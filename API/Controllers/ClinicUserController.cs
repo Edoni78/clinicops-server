@@ -28,7 +28,7 @@ namespace ClinicOps.API.Controllers
         /// List users for the clinic. ClinicAdmin/Nurse see their clinic; SuperAdmin can pass clinicId query. Optional role filter.
         /// </summary>
         [HttpGet]
-        [Authorize(Roles = "ClinicAdmin,SuperAdmin,Nurse")]
+        [Authorize(Roles = "ClinicAdmin,SuperAdmin,Nurse,Doctor")]
         [ProducesResponseType(typeof(List<ClinicUserListItemDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<List<ClinicUserListItemDto>>> List(
             [FromQuery] Guid? clinicId = null,

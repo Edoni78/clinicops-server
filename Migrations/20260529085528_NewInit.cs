@@ -411,11 +411,19 @@ namespace clinicops.Migrations
                     CompletedAt = table.Column<DateTime>(type: "datetime(6)", nullable: true),
                     Notes = table.Column<string>(type: "varchar(500)", maxLength: 500, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    AssignedDoctorUserId = table.Column<string>(type: "varchar(255)", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     ServiceId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_PatientCases", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PatientCases_AspNetUsers_AssignedDoctorUserId",
+                        column: x => x.AssignedDoctorUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_PatientCases_Clinics_ClinicId",
                         column: x => x.ClinicId,
@@ -579,12 +587,12 @@ namespace clinicops.Migrations
             migrationBuilder.InsertData(
                 table: "AspNetUsers",
                 columns: new[] { "Id", "AccessFailedCount", "ClinicId", "ConcurrencyStamp", "CreatedAt", "DoctorDisplayName", "Email", "EmailConfirmed", "IsActive", "LockoutEnabled", "LockoutEnd", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "SecurityStamp", "SignatureUrl", "StampUrl", "TwoFactorEnabled", "UserName" },
-                values: new object[] { "SuperAdmin", 0, null, "e32cbe82-ba01-4a25-b818-8d3c85929516", new DateTime(2026, 5, 28, 12, 24, 33, 804, DateTimeKind.Utc).AddTicks(1976), null, "superadmin@clinicops.local", true, true, false, null, "SUPERADMIN@CLINICOPS.LOCAL", "SUPERADMIN@CLINICOPS.LOCAL", "AQAAAAIAAYagAAAAEKt7cd5SMlLsrdS0wzgboEahoY6NkKnu/AOfPGWeSVJ7N+s+dBtPR1xEmJVg/HS47Q==", null, false, "STATIC-SECURITY-STAMP", null, null, false, "superadmin@clinicops.local" });
+                values: new object[] { "SuperAdmin", 0, null, "224fabb6-0bb8-4c16-aa8d-0c92ac2806f3", new DateTime(2026, 5, 29, 8, 55, 28, 39, DateTimeKind.Utc).AddTicks(590), null, "superadmin@clinicops.local", true, true, false, null, "SUPERADMIN@CLINICOPS.LOCAL", "SUPERADMIN@CLINICOPS.LOCAL", "AQAAAAIAAYagAAAAEOgPgjzGJPGbk/5LoLilliBQdwM5nLXX5waW7E3DkwaIr8c3MQiqyHp2b7u4iy8W8g==", null, false, "STATIC-SECURITY-STAMP", null, null, false, "superadmin@clinicops.local" });
 
             migrationBuilder.InsertData(
                 table: "Clinics",
                 columns: new[] { "Id", "Address", "ClinicMode", "CreatedAt", "Description", "IsActive", "LogoUrl", "Name", "Phone" },
-                values: new object[] { new Guid("11111111-1111-1111-1111-111111111111"), "123 Test Street", 1, new DateTime(2026, 5, 28, 12, 24, 33, 838, DateTimeKind.Utc).AddTicks(6686), null, true, null, "Default Test Clinic", "+1234567890" });
+                values: new object[] { new Guid("11111111-1111-1111-1111-111111111111"), "123 Test Street", 1, new DateTime(2026, 5, 29, 8, 55, 28, 74, DateTimeKind.Utc).AddTicks(3196), null, true, null, "Default Test Clinic", "+1234567890" });
 
             migrationBuilder.InsertData(
                 table: "AspNetUserRoles",
@@ -653,6 +661,11 @@ namespace clinicops.Migrations
                 table: "MedicalReports",
                 column: "PatientCaseId",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PatientCases_AssignedDoctorUserId",
+                table: "PatientCases",
+                column: "AssignedDoctorUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PatientCases_ClinicId",
@@ -758,10 +771,10 @@ namespace clinicops.Migrations
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers");
+                name: "PatientCases");
 
             migrationBuilder.DropTable(
-                name: "PatientCases");
+                name: "AspNetUsers");
 
             migrationBuilder.DropTable(
                 name: "Patients");
