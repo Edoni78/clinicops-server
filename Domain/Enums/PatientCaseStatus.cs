@@ -3,9 +3,7 @@ namespace ClinicOps.Domain.Enums
     public enum PatientCaseStatus
     {
         Waiting = 1,
-        InProgress = 2,
-        InConsultation = 3,
-        Completed = 4,
-        Finished = 5
+        InConsultation = 2,
+        Finished = 3
     }
 }

@@ -67,7 +67,7 @@ namespace ClinicOps.Application.Services.Patient
             }
 
             @case.Status = status;
-            if (status == PatientCaseStatus.Completed || status == PatientCaseStatus.Finished)
+            if (status == PatientCaseStatus.Finished)
                 @case.CompletedAt = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();

@@ -63,7 +63,7 @@ namespace ClinicOps.API.Controllers
         }
 
         /// <summary>
-        /// List patient cases for the clinic. Optional status filter (Waiting, InProgress, InConsultation, Completed, Finished).
+        /// List patient cases for the clinic. Optional status filter (Waiting, InConsultation, Finished).
         /// </summary>
         [HttpGet]
         [ProducesResponseType(typeof(List<PatientCaseListItemDto>), StatusCodes.Status200OK)]
@@ -251,15 +251,15 @@ namespace ClinicOps.API.Controllers
         }
 
         /// <summary>
-        /// Update patient case status (e.g. InConsultation when doctor starts, Completed when done).
+        /// Update patient case status (Waiting → InConsultation → Finished).
         /// </summary>
         [HttpPatch("{id:guid}/status")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateStatus(Guid id, [FromQuery] string status)
         {
-            if (!Enum.TryParse<PatientCaseStatus>(status, ignoreCase: true, out var statusEnum))
-                return BadRequest("Invalid status. Use: Waiting, InProgress, InConsultation, Completed, Finished.");
+            if (!PatientCaseStatusParser.TryParse(status, out var statusEnum))
+                return BadRequest(PatientCaseStatusParser.AllowedStatusesMessage);
             var (_, clinicId) = await ResolveClinicIdAsync();
             try
             {

@@ -33,7 +33,7 @@ namespace ClinicOps.Application.Services.Patient
                     query = query.Where(pc => pc.AssignedDoctorUserId == doctorUserId);
             }
 
-            if (!string.IsNullOrEmpty(status) && Enum.TryParse<PatientCaseStatus>(status, ignoreCase: true, out var statusEnum))
+            if (!string.IsNullOrEmpty(status) && PatientCaseStatusParser.TryParse(status, out var statusEnum))
                 query = query.Where(pc => pc.Status == statusEnum);
 
             return await query
