@@ -24,6 +24,9 @@ namespace ClinicOps.API.DTOs.Patient
         [MaxLength(500, ErrorMessage = "Notes cannot exceed 500 characters")]
         public string? Notes { get; set; }
 
+        [Required(ErrorMessage = "Assigned doctor is required")]
+        public string AssignedDoctorUserId { get; set; } = null!;
+
         // Optional clinicId for SuperAdmin testing
         public Guid? ClinicId { get; set; }
     }

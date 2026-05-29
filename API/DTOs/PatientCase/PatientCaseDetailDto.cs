@@ -12,6 +12,8 @@ namespace ClinicOps.API.DTOs.PatientCase
         public Guid? ServiceId { get; set; }
         public string? ServiceName { get; set; }
         public decimal? ServicePrice { get; set; }
+        public string? AssignedDoctorUserId { get; set; }
+        public string? AssignedDoctorName { get; set; }
     }
 
     public class PatientCaseDetailDto
@@ -31,6 +33,8 @@ namespace ClinicOps.API.DTOs.PatientCase
         public Guid? ServiceId { get; set; }
         public string? ServiceName { get; set; }
         public decimal? ServicePrice { get; set; }
+        public string? AssignedDoctorUserId { get; set; }
+        public string? AssignedDoctorName { get; set; }
         public VitalSignsSummaryDto? LatestVitals { get; set; }
         public MedicalReportSummaryDto? MedicalReport { get; set; }
     }

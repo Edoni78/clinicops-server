@@ -2,6 +2,7 @@ using ClinicOps.API.DTOs.Patient;
 using ClinicOps.Domain.Entities;
 using ClinicOps.Domain.Enums;
 using ClinicOps.Infrastructure.Data;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClinicOps.Application.Services.Patient
@@ -9,25 +10,26 @@ namespace ClinicOps.Application.Services.Patient
     public class PatientService : IPatientService
     {
         private readonly ApplicationDbContext _db;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public PatientService(ApplicationDbContext db)
+        public PatientService(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
         {
             _db = db;
+            _userManager = userManager;
         }
 
         public async Task<PatientResponseDto> RegisterPatientAtReceptionAsync(
             Guid clinicId,
             RegisterPatientRequest request)
         {
-            // Verify clinic exists and is active
             var clinic = await _db.Clinics
                 .FirstOrDefaultAsync(c => c.Id == clinicId && c.IsActive);
 
             if (clinic == null)
                 throw new InvalidOperationException("Clinic not found or inactive.");
 
-            // Check if patient already exists in this clinic
-            // (by name, DOB, and phone if provided)
+            var assignedDoctor = await ValidateAssignedDoctorAsync(clinicId, request.AssignedDoctorUserId);
+
             var existingPatient = await _db.Patients
                 .FirstOrDefaultAsync(p =>
                     p.ClinicId == clinicId &&
@@ -42,10 +44,8 @@ namespace ClinicOps.Application.Services.Patient
 
             if (existingPatient != null)
             {
-                // Patient exists - use existing patient
                 patient = existingPatient;
 
-                // Check if there's an active waiting case
                 var activeCase = await _db.PatientCases
                     .FirstOrDefaultAsync(pc =>
                         pc.PatientId == patient.Id &&
@@ -54,13 +54,13 @@ namespace ClinicOps.Application.Services.Patient
 
                 if (activeCase == null)
                 {
-                    // Create new case with Waiting status (reception)
                     patientCase = new PatientCase
                     {
                         ClinicId = clinicId,
                         PatientId = patient.Id,
                         Status = PatientCaseStatus.Waiting,
                         Notes = request.Notes,
+                        AssignedDoctorUserId = assignedDoctor.Id,
                         CreatedAt = DateTime.UtcNow
                     };
 
@@ -68,17 +68,15 @@ namespace ClinicOps.Application.Services.Patient
                 }
                 else
                 {
-                    // Update existing waiting case notes if provided
                     if (!string.IsNullOrEmpty(request.Notes))
-                    {
                         activeCase.Notes = request.Notes;
-                    }
+
+                    activeCase.AssignedDoctorUserId = assignedDoctor.Id;
                     patientCase = activeCase;
                 }
             }
             else
             {
-                // New patient - create patient and case
                 patient = new Domain.Entities.Patient
                 {
                     ClinicId = clinicId,
@@ -93,13 +91,13 @@ namespace ClinicOps.Application.Services.Patient
 
                 _db.Patients.Add(patient);
 
-                // Create patient case with Waiting status (reception)
                 patientCase = new PatientCase
                 {
                     ClinicId = clinicId,
                     PatientId = patient.Id,
                     Status = PatientCaseStatus.Waiting,
                     Notes = request.Notes,
+                    AssignedDoctorUserId = assignedDoctor.Id,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -107,6 +105,8 @@ namespace ClinicOps.Application.Services.Patient
             }
 
             await _db.SaveChangesAsync();
+
+            var doctorName = assignedDoctor.DoctorDisplayName ?? assignedDoctor.Email ?? assignedDoctor.UserName;
 
             return new PatientResponseDto
             {
@@ -120,8 +120,31 @@ namespace ClinicOps.Application.Services.Patient
                 CreatedAt = patient.CreatedAt,
                 IsActive = patient.IsActive,
                 PatientCaseId = patientCase?.Id,
-                PatientCaseStatus = patientCase?.Status.ToString()
+                PatientCaseStatus = patientCase?.Status.ToString(),
+                AssignedDoctorUserId = patientCase?.AssignedDoctorUserId,
+                AssignedDoctorName = doctorName
             };
+        }
+
+        private async Task<ApplicationUser> ValidateAssignedDoctorAsync(Guid clinicId, string doctorUserId)
+        {
+            if (string.IsNullOrWhiteSpace(doctorUserId))
+                throw new InvalidOperationException("Assigned doctor is required.");
+
+            var doctor = await _userManager.Users
+                .FirstOrDefaultAsync(u =>
+                    u.Id == doctorUserId &&
+                    u.ClinicId == clinicId &&
+                    u.IsActive);
+
+            if (doctor == null)
+                throw new InvalidOperationException("Assigned doctor not found in this clinic.");
+
+            var roles = await _userManager.GetRolesAsync(doctor);
+            if (!roles.Contains("Doctor", StringComparer.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Selected user is not a doctor in this clinic.");
+
+            return doctor;
         }
     }
 }

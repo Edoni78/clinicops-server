@@ -22,6 +22,10 @@ namespace ClinicOps.Domain.Entities
         [MaxLength(500)]
         public string? Notes { get; set; }
 
+        /// <summary>Doctor assigned at reception when the patient is registered.</summary>
+        public string? AssignedDoctorUserId { get; set; }
+        public ApplicationUser? AssignedDoctor { get; set; }
+
         /// <summary>Optional clinic service selected by the doctor for billing (same clinic as the case).</summary>
         public Guid? ServiceId { get; set; }
         public Service? Service { get; set; }

@@ -13,5 +13,7 @@ namespace ClinicOps.API.DTOs.Patient
         public bool IsActive { get; set; }
         public Guid? PatientCaseId { get; set; }
         public string? PatientCaseStatus { get; set; }
+        public string? AssignedDoctorUserId { get; set; }
+        public string? AssignedDoctorName { get; set; }
     }
 }

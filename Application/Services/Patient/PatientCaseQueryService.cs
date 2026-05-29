@@ -26,6 +26,13 @@ namespace ClinicOps.Application.Services.Patient
                 .AsNoTracking()
                 .Where(pc => pc.ClinicId == clinicId);
 
+            if (user.IsInRole("Doctor") && !user.IsInRole("SuperAdmin"))
+            {
+                var doctorUserId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirst("sub")?.Value;
+                if (!string.IsNullOrWhiteSpace(doctorUserId))
+                    query = query.Where(pc => pc.AssignedDoctorUserId == doctorUserId);
+            }
+
             if (!string.IsNullOrEmpty(status) && Enum.TryParse<PatientCaseStatus>(status, ignoreCase: true, out var statusEnum))
                 query = query.Where(pc => pc.Status == statusEnum);
 
@@ -42,7 +49,11 @@ namespace ClinicOps.Application.Services.Patient
                     CompletedAt = pc.CompletedAt,
                     ServiceId = pc.ServiceId,
                     ServiceName = pc.ServiceId != null ? pc.Service!.Name : null,
-                    ServicePrice = pc.ServiceId != null ? pc.Service!.Price : null
+                    ServicePrice = pc.ServiceId != null ? pc.Service!.Price : null,
+                    AssignedDoctorUserId = pc.AssignedDoctorUserId,
+                    AssignedDoctorName = pc.AssignedDoctor != null
+                        ? (pc.AssignedDoctor.DoctorDisplayName ?? pc.AssignedDoctor.Email ?? pc.AssignedDoctor.UserName)
+                        : null
                 })
                 .ToListAsync();
         }
@@ -54,10 +65,18 @@ namespace ClinicOps.Application.Services.Patient
                 .Include(pc => pc.Patient)
                 .Include(pc => pc.Clinic)
                 .Include(pc => pc.Service)
+                .Include(pc => pc.AssignedDoctor)
                 .FirstOrDefaultAsync(pc => pc.Id == caseId && pc.ClinicId == clinicId);
 
             if (@case == null)
                 throw new KeyNotFoundException("Patient case not found.");
+
+            if (user.IsInRole("Doctor") && !user.IsInRole("SuperAdmin"))
+            {
+                var doctorUserId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirst("sub")?.Value;
+                if (!string.IsNullOrWhiteSpace(doctorUserId) && @case.AssignedDoctorUserId != doctorUserId)
+                    throw new UnauthorizedAccessException("This patient case is assigned to another doctor.");
+            }
 
             var latestVitals = await _db.VitalSigns
                 .Where(v => v.PatientCaseId == caseId)
@@ -87,6 +106,10 @@ namespace ClinicOps.Application.Services.Patient
                 ServiceId = @case.ServiceId,
                 ServiceName = @case.Service?.Name,
                 ServicePrice = @case.Service?.Price,
+                AssignedDoctorUserId = @case.AssignedDoctorUserId,
+                AssignedDoctorName = @case.AssignedDoctor != null
+                    ? (@case.AssignedDoctor.DoctorDisplayName ?? @case.AssignedDoctor.Email ?? @case.AssignedDoctor.UserName)
+                    : null,
                 LatestVitals = latestVitals == null ? null : new VitalSignsSummaryDto
                 {
                     Id = latestVitals.Id,

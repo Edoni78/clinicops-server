@@ -11,7 +11,7 @@ namespace ClinicOps.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "ClinicAdmin,SuperAdmin")]
+    [Authorize]
     public class ClinicUserController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
@@ -25,9 +25,10 @@ namespace ClinicOps.API.Controllers
         }
 
         /// <summary>
-        /// List users for the clinic. ClinicAdmin sees their clinic; SuperAdmin can pass clinicId query. Optional role filter.
+        /// List users for the clinic. ClinicAdmin/Nurse see their clinic; SuperAdmin can pass clinicId query. Optional role filter.
         /// </summary>
         [HttpGet]
+        [Authorize(Roles = "ClinicAdmin,SuperAdmin,Nurse")]
         [ProducesResponseType(typeof(List<ClinicUserListItemDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<List<ClinicUserListItemDto>>> List(
             [FromQuery] Guid? clinicId = null,
@@ -38,7 +39,7 @@ namespace ClinicOps.API.Controllers
                 return BadRequest("ClinicId required for SuperAdmin, or login as ClinicAdmin.");
 
             var users = await _userManager.Users
-                .Where(u => u.ClinicId == resolvedClinicId.Value)
+                .Where(u => u.ClinicId == resolvedClinicId.Value && u.IsActive)
                 .ToListAsync();
 
             var result = new List<ClinicUserListItemDto>();
@@ -51,6 +52,7 @@ namespace ClinicOps.API.Controllers
                 {
                     Id = u.Id,
                     Email = u.Email!,
+                    DisplayName = u.DoctorDisplayName ?? u.Email ?? u.UserName ?? u.Id,
                     Role = r ?? "",
                     IsActive = u.IsActive,
                     CreatedAt = u.CreatedAt
@@ -67,6 +69,7 @@ namespace ClinicOps.API.Controllers
         /// Create a clinic user (Doctor, Nurse, or LabTechnician). ClinicAdmin: uses their clinic. SuperAdmin: pass clinicId in body or query.
         /// </summary>
         [HttpPost]
+        [Authorize(Roles = "ClinicAdmin,SuperAdmin")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<ClinicUserListItemDto>> Create(
@@ -118,6 +121,7 @@ namespace ClinicOps.API.Controllers
             {
                 Id = user.Id,
                 Email = user.Email!,
+                DisplayName = user.Email!,
                 Role = role,
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt
@@ -129,6 +133,7 @@ namespace ClinicOps.API.Controllers
         /// ClinicAdmin can delete users in their own clinic; SuperAdmin can delete by clinicId query.
         /// </summary>
         [HttpDelete("{id}")]
+        [Authorize(Roles = "ClinicAdmin,SuperAdmin")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
