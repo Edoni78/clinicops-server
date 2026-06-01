@@ -14,6 +14,9 @@ namespace ClinicOps.API.DTOs.ClinicUser
 
     public class CreateClinicUserRequest
     {
+        [Required, MaxLength(200)]
+        public string DisplayName { get; set; } = null!;
+
         [Required, EmailAddress]
         public string Email { get; set; } = null!;
 

@@ -1,4 +1,5 @@
 using ClinicOps.API.DTOs.PatientCase;
+using ClinicOps.Application.Services.ClinicSettings;
 using ClinicOps.Application.Services.Gdpr;
 using ClinicOps.Domain.Entities;
 using ClinicOps.Domain.Enums;
@@ -128,7 +129,8 @@ namespace ClinicOps.Application.Services.Patient
                     Therapy = report.Therapy,
                     CreatedAt = report.CreatedAt,
                     DoctorId = report.DoctorUserId ?? ""
-                }
+                },
+                VitalPreferences = ClinicVitalPreferencesMapper.ToDto(@case.Clinic)
             };
         }
 

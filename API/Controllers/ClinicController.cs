@@ -1,4 +1,5 @@
 using ClinicOps.API.DTOs.Clinic;
+using ClinicOps.Application.Services.ClinicSettings;
 using ClinicOps.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -38,18 +39,7 @@ namespace ClinicOps.API.Controllers
             if (clinic == null)
                 return NotFound("Clinic not found.");
 
-            return Ok(new ClinicProfileDto
-            {
-                Id = clinic.Id,
-                Name = clinic.Name,
-                Address = clinic.Address,
-                Phone = clinic.Phone,
-                LogoUrl = clinic.LogoUrl,
-                Description = clinic.Description,
-                ClinicMode = clinic.ClinicMode,
-                CreatedAt = clinic.CreatedAt,
-                IsActive = clinic.IsActive
-            });
+            return Ok(MapProfile(clinic));
         }
 
         /// <summary>
@@ -75,21 +65,11 @@ namespace ClinicOps.API.Controllers
             if (request.Phone != null) clinic.Phone = request.Phone;
             if (request.LogoUrl != null) clinic.LogoUrl = request.LogoUrl;
             if (request.Description != null) clinic.Description = request.Description;
+            ClinicVitalPreferencesMapper.ApplyToEntity(request.VitalPreferences, clinic);
 
             await _db.SaveChangesAsync();
 
-            return Ok(new ClinicProfileDto
-            {
-                Id = clinic.Id,
-                Name = clinic.Name,
-                Address = clinic.Address,
-                Phone = clinic.Phone,
-                LogoUrl = clinic.LogoUrl,
-                Description = clinic.Description,
-                ClinicMode = clinic.ClinicMode,
-                CreatedAt = clinic.CreatedAt,
-                IsActive = clinic.IsActive
-            });
+            return Ok(MapProfile(clinic));
         }
 
         /// <summary>
@@ -128,19 +108,22 @@ namespace ClinicOps.API.Controllers
             clinic.LogoUrl = logoUrl;
             await _db.SaveChangesAsync();
 
-            return Ok(new ClinicProfileDto
-            {
-                Id = clinic.Id,
-                Name = clinic.Name,
-                Address = clinic.Address,
-                Phone = clinic.Phone,
-                LogoUrl = clinic.LogoUrl,
-                Description = clinic.Description,
-                ClinicMode = clinic.ClinicMode,
-                CreatedAt = clinic.CreatedAt,
-                IsActive = clinic.IsActive
-            });
+            return Ok(MapProfile(clinic));
         }
+
+        private static ClinicProfileDto MapProfile(ClinicOps.Domain.Entities.Clinic clinic) => new()
+        {
+            Id = clinic.Id,
+            Name = clinic.Name,
+            Address = clinic.Address,
+            Phone = clinic.Phone,
+            LogoUrl = clinic.LogoUrl,
+            Description = clinic.Description,
+            ClinicMode = clinic.ClinicMode,
+            CreatedAt = clinic.CreatedAt,
+            IsActive = clinic.IsActive,
+            VitalPreferences = ClinicVitalPreferencesMapper.ToDto(clinic),
+        };
 
         private Guid? GetClinicIdFromToken()
         {

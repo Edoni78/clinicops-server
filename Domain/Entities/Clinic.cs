@@ -30,5 +30,17 @@ namespace ClinicOps.Domain.Entities
         public bool IsActive { get; set; } = true;
 
         public ClinicMode ClinicMode { get; set; } = ClinicMode.FullTeam;
+
+        /// <summary>Clinic preference: allow nurses to record weight (kg).</summary>
+        public bool EnableVitalWeight { get; set; } = true;
+
+        /// <summary>Clinic preference: allow nurses to record blood pressure.</summary>
+        public bool EnableVitalBloodPressure { get; set; } = true;
+
+        /// <summary>Clinic preference: allow nurses to record temperature (°C).</summary>
+        public bool EnableVitalTemperature { get; set; } = true;
+
+        /// <summary>Clinic preference: allow nurses to record heart rate (bpm).</summary>
+        public bool EnableVitalHeartRate { get; set; } = true;
     }
 }

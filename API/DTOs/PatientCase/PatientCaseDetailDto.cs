@@ -1,3 +1,5 @@
+using ClinicOps.API.DTOs.Clinic;
+
 namespace ClinicOps.API.DTOs.PatientCase
 {
     public class PatientCaseListItemDto
@@ -37,6 +39,7 @@ namespace ClinicOps.API.DTOs.PatientCase
         public string? AssignedDoctorName { get; set; }
         public VitalSignsSummaryDto? LatestVitals { get; set; }
         public MedicalReportSummaryDto? MedicalReport { get; set; }
+        public ClinicVitalPreferencesDto VitalPreferences { get; set; } = new();
     }
 
     public class VitalSignsSummaryDto

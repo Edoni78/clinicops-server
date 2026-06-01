@@ -17,6 +17,7 @@ namespace ClinicOps.API.DTOs.Clinic
         public ClinicMode ClinicMode { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsActive { get; set; }
+        public ClinicVitalPreferencesDto VitalPreferences { get; set; } = new();
     }
 
     /// <summary>
@@ -38,5 +39,7 @@ namespace ClinicOps.API.DTOs.Clinic
 
         [MaxLength(2000)]
         public string? Description { get; set; }
+
+        public ClinicVitalPreferencesDto? VitalPreferences { get; set; }
     }
 }

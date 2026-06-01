@@ -62,7 +62,7 @@ namespace ClinicOps.API.Controllers
             if (!string.IsNullOrEmpty(role) && AllowedRoles.Contains(role, StringComparer.OrdinalIgnoreCase))
                 result = result.Where(x => x.Role.Equals(role, StringComparison.OrdinalIgnoreCase)).ToList();
 
-            return Ok(result.OrderBy(x => x.Role).ThenBy(x => x.Email).ToList());
+            return Ok(result.OrderBy(x => x.Role).ThenBy(x => x.DisplayName).ToList());
         }
 
         /// <summary>
@@ -99,6 +99,12 @@ namespace ClinicOps.API.Controllers
                 return BadRequest("This clinic mode does not include nurse or laboratory staff workflow.");
             }
 
+            var displayName = request.DisplayName?.Trim();
+            if (string.IsNullOrEmpty(displayName))
+                return BadRequest("DisplayName is required.");
+            if (displayName.Length > 200)
+                return BadRequest("DisplayName must be at most 200 characters.");
+
             var user = new ApplicationUser
             {
                 UserName = request.Email,
@@ -107,6 +113,7 @@ namespace ClinicOps.API.Controllers
                 NormalizedEmail = request.Email.ToUpperInvariant(),
                 EmailConfirmed = true,
                 ClinicId = resolvedClinicId.Value,
+                DoctorDisplayName = displayName,
                 CreatedAt = DateTime.UtcNow,
                 IsActive = true
             };
@@ -121,7 +128,7 @@ namespace ClinicOps.API.Controllers
             {
                 Id = user.Id,
                 Email = user.Email!,
-                DisplayName = user.Email!,
+                DisplayName = user.DoctorDisplayName ?? user.Email!,
                 Role = role,
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt

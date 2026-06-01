@@ -1,4 +1,5 @@
 using ClinicOps.API.DTOs.Vitals;
+using ClinicOps.Application.Services.ClinicSettings;
 using ClinicOps.Domain.Entities;
 using ClinicOps.Domain.Enums;
 using ClinicOps.Infrastructure.Data;
@@ -17,12 +18,14 @@ namespace ClinicOps.Application.Services.Patient
 
         public async Task<VitalSignsDto> SubmitVitalsAsync(Guid caseId, Guid clinicId, SubmitVitalSignsRequest request)
         {
-            var clinicMode = await _db.Clinics
-                .Where(c => c.Id == clinicId)
-                .Select(c => c.ClinicMode)
-                .FirstOrDefaultAsync();
-            if (clinicMode == ClinicMode.SoloDoctor)
+            var clinic = await _db.Clinics.FirstOrDefaultAsync(c => c.Id == clinicId);
+            if (clinic == null)
+                throw new KeyNotFoundException("Clinic not found.");
+
+            if (clinic.ClinicMode == ClinicMode.SoloDoctor)
                 throw new InvalidOperationException("This clinic mode does not include nurse workflow.");
+
+            ClinicVitalPreferencesMapper.ValidateSubmit(request, clinic);
 
             var @case = await _db.PatientCases
                 .Include(pc => pc.Patient)
@@ -34,11 +37,11 @@ namespace ClinicOps.Application.Services.Patient
             {
                 ClinicId = clinicId,
                 PatientCaseId = caseId,
-                WeightKg = request.WeightKg,
-                SystolicPressure = request.SystolicPressure,
-                DiastolicPressure = request.DiastolicPressure,
-                TemperatureC = request.TemperatureC,
-                HeartRate = request.HeartRate,
+                WeightKg = clinic.EnableVitalWeight ? request.WeightKg : null,
+                SystolicPressure = clinic.EnableVitalBloodPressure ? request.SystolicPressure : null,
+                DiastolicPressure = clinic.EnableVitalBloodPressure ? request.DiastolicPressure : null,
+                TemperatureC = clinic.EnableVitalTemperature ? request.TemperatureC : null,
+                HeartRate = clinic.EnableVitalHeartRate ? request.HeartRate : null,
                 RecordedAt = DateTime.UtcNow
             };
 
