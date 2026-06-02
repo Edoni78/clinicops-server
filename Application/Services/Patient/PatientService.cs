@@ -45,35 +45,11 @@ namespace ClinicOps.Application.Services.Patient
             if (existingPatient != null)
             {
                 patient = existingPatient;
-
-                var activeCase = await _db.PatientCases
-                    .FirstOrDefaultAsync(pc =>
-                        pc.PatientId == patient.Id &&
-                        pc.ClinicId == clinicId &&
-                        pc.Status == PatientCaseStatus.Waiting);
-
-                if (activeCase == null)
-                {
-                    patientCase = new PatientCase
-                    {
-                        ClinicId = clinicId,
-                        PatientId = patient.Id,
-                        Status = PatientCaseStatus.Waiting,
-                        Notes = request.Notes,
-                        AssignedDoctorUserId = assignedDoctor.Id,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    _db.PatientCases.Add(patientCase);
-                }
-                else
-                {
-                    if (!string.IsNullOrEmpty(request.Notes))
-                        activeCase.Notes = request.Notes;
-
-                    activeCase.AssignedDoctorUserId = assignedDoctor.Id;
-                    patientCase = activeCase;
-                }
+                patientCase = await CreateOrReuseWaitingCaseAsync(
+                    clinicId,
+                    patient.Id,
+                    assignedDoctor.Id,
+                    request.Notes);
             }
             else
             {
@@ -90,23 +66,94 @@ namespace ClinicOps.Application.Services.Patient
                 };
 
                 _db.Patients.Add(patient);
+                await _db.SaveChangesAsync();
 
-                patientCase = new PatientCase
-                {
-                    ClinicId = clinicId,
-                    PatientId = patient.Id,
-                    Status = PatientCaseStatus.Waiting,
-                    Notes = request.Notes,
-                    AssignedDoctorUserId = assignedDoctor.Id,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                _db.PatientCases.Add(patientCase);
+                patientCase = await CreateOrReuseWaitingCaseAsync(
+                    clinicId,
+                    patient.Id,
+                    assignedDoctor.Id,
+                    request.Notes);
             }
 
-            await _db.SaveChangesAsync();
+            return await BuildPatientResponseAsync(patient, patientCase, assignedDoctor);
+        }
 
-            var doctorName = assignedDoctor.DoctorDisplayName ?? assignedDoctor.Email ?? assignedDoctor.UserName;
+        public async Task<PatientResponseDto> OpenCaseForExistingPatientAsync(
+            Guid clinicId,
+            Guid patientId,
+            OpenPatientCaseRequest request)
+        {
+            var clinic = await _db.Clinics
+                .FirstOrDefaultAsync(c => c.Id == clinicId && c.IsActive);
+
+            if (clinic == null)
+                throw new InvalidOperationException("Clinic not found or inactive.");
+
+            var patient = await _db.Patients
+                .FirstOrDefaultAsync(p =>
+                    p.Id == patientId &&
+                    p.ClinicId == clinicId &&
+                    p.IsActive);
+
+            if (patient == null)
+                throw new InvalidOperationException("Patient not found in this clinic.");
+
+            var assignedDoctor = await ValidateAssignedDoctorAsync(clinicId, request.AssignedDoctorUserId);
+
+            var patientCase = await CreateOrReuseWaitingCaseAsync(
+                clinicId,
+                patient.Id,
+                assignedDoctor.Id,
+                request.Notes);
+
+            return await BuildPatientResponseAsync(patient, patientCase, assignedDoctor);
+        }
+
+        private async Task<PatientCase> CreateOrReuseWaitingCaseAsync(
+            Guid clinicId,
+            Guid patientId,
+            string assignedDoctorUserId,
+            string? notes)
+        {
+            var activeCase = await _db.PatientCases
+                .FirstOrDefaultAsync(pc =>
+                    pc.PatientId == patientId &&
+                    pc.ClinicId == clinicId &&
+                    pc.Status == PatientCaseStatus.Waiting);
+
+            if (activeCase != null)
+            {
+                if (!string.IsNullOrEmpty(notes))
+                    activeCase.Notes = notes;
+
+                activeCase.AssignedDoctorUserId = assignedDoctorUserId;
+                await _db.SaveChangesAsync();
+                return activeCase;
+            }
+
+            var patientCase = new PatientCase
+            {
+                ClinicId = clinicId,
+                PatientId = patientId,
+                Status = PatientCaseStatus.Waiting,
+                Notes = notes,
+                AssignedDoctorUserId = assignedDoctorUserId,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _db.PatientCases.Add(patientCase);
+            await _db.SaveChangesAsync();
+            return patientCase;
+        }
+
+        private async Task<PatientResponseDto> BuildPatientResponseAsync(
+            Domain.Entities.Patient patient,
+            PatientCase? patientCase,
+            ApplicationUser assignedDoctor)
+        {
+            var doctorName = assignedDoctor.DoctorDisplayName
+                ?? assignedDoctor.Email
+                ?? assignedDoctor.UserName;
 
             return new PatientResponseDto
             {

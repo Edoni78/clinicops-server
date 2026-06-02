@@ -71,6 +71,10 @@ namespace ClinicOps.Infrastructure.Data
                 .HasForeignKey(pc => pc.AssignedDoctorUserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            builder.Entity<PatientCase>()
+                .HasIndex(pc => new { pc.ClinicId, pc.ProtocolNumber })
+                .IsUnique();
+
             builder.Entity<VitalSigns>()
                 .HasOne(v => v.PatientCase)
                 .WithMany()

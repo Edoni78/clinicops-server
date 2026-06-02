@@ -20,6 +20,7 @@ namespace ClinicOps.Application.Services.Pdf
         public string? PatientGender { get; set; }
         public string? PatientPhone { get; set; }
         public string Status { get; set; } = null!;
+        public string? ProtocolNumber { get; set; }
         public DateTime CreatedAt { get; set; }
         public string? Notes { get; set; }
         public VitalsModel? LatestVitals { get; set; }

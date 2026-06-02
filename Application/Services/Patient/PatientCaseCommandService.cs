@@ -4,6 +4,7 @@ using ClinicOps.Domain.Entities;
 using ClinicOps.Domain.Enums;
 using ClinicOps.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace ClinicOps.Application.Services.Patient
 {
@@ -76,6 +77,40 @@ namespace ClinicOps.Application.Services.Patient
             await _db.SaveChangesAsync();
 
             return (service.Id, service.Name, service.Price);
+        }
+
+        public async Task<string> UpdateProtocolNumberAsync(
+            Guid caseId,
+            Guid clinicId,
+            string protocolNumber,
+            ClaimsPrincipal user)
+        {
+            var clinic = await _db.Clinics.FirstOrDefaultAsync(c => c.Id == clinicId);
+            if (clinic == null)
+                throw new KeyNotFoundException("Clinic not found.");
+
+            PatientCaseProtocolHelper.EnsureCanEditProtocol(clinic, user);
+
+            var normalized = PatientCaseProtocolHelper.Normalize(protocolNumber);
+            if (string.IsNullOrEmpty(normalized))
+                throw new InvalidOperationException("Numri i protokollit nuk mund të jetë bosh.");
+
+            var @case = await _db.PatientCases.FirstOrDefaultAsync(pc => pc.Id == caseId && pc.ClinicId == clinicId);
+            if (@case == null)
+                throw new KeyNotFoundException("Patient case not found.");
+
+            var duplicate = await _db.PatientCases.AnyAsync(pc =>
+                pc.ClinicId == clinicId
+                && pc.Id != caseId
+                && pc.ProtocolNumber != null
+                && pc.ProtocolNumber.ToLower() == normalized.ToLower());
+
+            if (duplicate)
+                throw new InvalidOperationException("Ky numër protokolli ekziston tashmë për një rast tjetër në klinikë.");
+
+            @case.ProtocolNumber = normalized;
+            await _db.SaveChangesAsync();
+            return normalized;
         }
     }
 }

@@ -84,6 +84,7 @@ namespace ClinicOps.Application.Services.Patient
                 PatientGender = @case.Patient.Gender,
                 PatientPhone = @case.Patient.Phone,
                 Status = @case.Status.ToString(),
+                ProtocolNumber = @case.ProtocolNumber,
                 CreatedAt = @case.CreatedAt,
                 Notes = @case.Notes,
                 LatestVitals = latestVitals == null ? null : new VitalsModel

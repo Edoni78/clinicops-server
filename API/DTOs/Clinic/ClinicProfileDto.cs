@@ -18,6 +18,8 @@ namespace ClinicOps.API.DTOs.Clinic
         public DateTime CreatedAt { get; set; }
         public bool IsActive { get; set; }
         public ClinicVitalPreferencesDto VitalPreferences { get; set; } = new();
+        public ClinicProtocolPreferencesDto ProtocolPreferences { get; set; } = new();
+        public ClinicColorThemePreferencesDto ColorThemePreferences { get; set; } = new();
     }
 
     /// <summary>
@@ -41,5 +43,7 @@ namespace ClinicOps.API.DTOs.Clinic
         public string? Description { get; set; }
 
         public ClinicVitalPreferencesDto? VitalPreferences { get; set; }
+        public ClinicProtocolPreferencesDto? ProtocolPreferences { get; set; }
+        public ClinicColorThemePreferencesDto? ColorThemePreferences { get; set; }
     }
 }

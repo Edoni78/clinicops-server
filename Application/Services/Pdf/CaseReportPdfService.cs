@@ -91,6 +91,7 @@ namespace ClinicOps.Application.Services.Pdf
             var patientDob = H(m.PatientDateOfBirth?.ToString("dd/MM/yyyy") ?? "—");
             var patientPhone = H(m.PatientPhone ?? "—");
             var caseStatus = H(m.Status ?? "—");
+            var protocolNumber = H(string.IsNullOrWhiteSpace(m.ProtocolNumber) ? "—" : m.ProtocolNumber!.Trim());
             var reportDate = DateTime.Now.ToString("dd/MM/yyyy");
             var reportTime = DateTime.Now.ToString("HH:mm");
             var doctorName = H(m.DoctorDisplayName ?? "—");
@@ -158,6 +159,8 @@ namespace ClinicOps.Application.Services.Pdf
             sb.Append("<div><span style='color:#64748b;'>Data:</span> ").Append(reportDate).Append("</div>");
             sb.Append("<div><span style='color:#64748b;'>Ora:</span> ").Append(reportTime).Append("</div>");
             sb.Append("<div><span style='color:#64748b;'>Mjeku:</span> ").Append(doctorName).Append("</div>");
+            if (!string.IsNullOrWhiteSpace(m.ProtocolNumber))
+                sb.Append("<div><span style='color:#64748b;'>Nr. protokollit:</span> ").Append(protocolNumber).Append("</div>");
             sb.Append("</div></div>");
             sb.Append("<div style='text-align:center; margin-top:8px;'>");
             sb.Append("<h2 style='margin:0; font-size:17px; color:#0f172a; letter-spacing:0.2px;'>RAPORT SPECIALISTIK</h2>");
@@ -171,6 +174,8 @@ namespace ClinicOps.Application.Services.Pdf
             sb.Append("<div style='display:flex; justify-content:space-between; gap:12px; padding:7px 12px; border-bottom:1px solid #e2e8f0;'><span style='font-size:12px; color:#64748b;'>Gjinia</span><span style='font-size:12px; color:#0f172a;'>").Append(patientGender).Append("</span></div>");
             sb.Append("<div style='display:flex; justify-content:space-between; gap:12px; padding:7px 12px; border-bottom:1px solid #e2e8f0;'><span style='font-size:12px; color:#64748b;'>Data e lindjes</span><span style='font-size:12px; color:#0f172a;'>").Append(patientDob).Append("</span></div>");
             sb.Append("<div style='display:flex; justify-content:space-between; gap:12px; padding:7px 12px; border-bottom:1px solid #e2e8f0;'><span style='font-size:12px; color:#64748b;'>Telefoni</span><span style='font-size:12px; color:#0f172a;'>").Append(patientPhone).Append("</span></div>");
+            if (!string.IsNullOrWhiteSpace(m.ProtocolNumber))
+                sb.Append("<div style='display:flex; justify-content:space-between; gap:12px; padding:7px 12px; border-bottom:1px solid #e2e8f0;'><span style='font-size:12px; color:#64748b;'>Nr. protokollit</span><span style='font-size:12px; color:#0f172a; font-weight:600;'>").Append(protocolNumber).Append("</span></div>");
             // sb.Append("<div style='display:flex; justify-content:space-between; gap:12px; padding:7px 12px;'><span style='font-size:12px; color:#64748b;'>Statusi i rastit</span><span style='font-size:12px; color:#0f172a;'>").Append(caseStatus).Append("</span></div>");
             sb.Append("</div></div>");
 
@@ -212,7 +217,10 @@ namespace ClinicOps.Application.Services.Pdf
             sb.Append("</div><div style='margin-top:6px; border-top:1px solid #cbd5e1; padding-top:5px; text-align:center; font-size:11px; color:#0f172a;'>").Append(clinicName).Append("</div></div>");
             sb.Append("</div></div>");
             sb.Append("<div style='margin-top:10px; padding-top:6px; border-top:1px solid #cbd5e1; font-size:10px; color:#64748b; display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; align-items:center;'>");
-            sb.Append("<span>").Append(clinicName).Append(" · Dokument zyrtar mjekësor</span>");
+            sb.Append("<span>").Append(clinicName).Append(" · Dokument zyrtar mjekësor");
+            if (!string.IsNullOrWhiteSpace(m.ProtocolNumber))
+                sb.Append(" · Nr. protokollit: ").Append(protocolNumber);
+            sb.Append("</span>");
             sb.Append("<span>").Append(clinicAddress).Append(" · Tel: ").Append(clinicPhone).Append("</span>");
             sb.Append("</div>");
 

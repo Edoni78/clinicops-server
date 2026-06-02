@@ -29,5 +29,9 @@ namespace ClinicOps.Domain.Entities
         /// <summary>Optional clinic service selected by the doctor for billing (same clinic as the case).</summary>
         public Guid? ServiceId { get; set; }
         public Service? Service { get; set; }
+
+        /// <summary>Unique protocol number per clinic when the feature is enabled (free-form text).</summary>
+        [MaxLength(100)]
+        public string? ProtocolNumber { get; set; }
     }
 }

@@ -65,7 +65,9 @@ namespace ClinicOps.API.Controllers
             if (request.Phone != null) clinic.Phone = request.Phone;
             if (request.LogoUrl != null) clinic.LogoUrl = request.LogoUrl;
             if (request.Description != null) clinic.Description = request.Description;
-            ClinicVitalPreferencesMapper.ApplyToEntity(request.VitalPreferences, clinic);
+            ClinicPreferencesMapper.ApplyVital(request.VitalPreferences, clinic);
+            ClinicPreferencesMapper.ApplyProtocol(request.ProtocolPreferences, clinic);
+            ClinicPreferencesMapper.ApplyColorTheme(request.ColorThemePreferences, clinic);
 
             await _db.SaveChangesAsync();
 
@@ -122,7 +124,9 @@ namespace ClinicOps.API.Controllers
             ClinicMode = clinic.ClinicMode,
             CreatedAt = clinic.CreatedAt,
             IsActive = clinic.IsActive,
-            VitalPreferences = ClinicVitalPreferencesMapper.ToDto(clinic),
+            VitalPreferences = ClinicPreferencesMapper.ToVitalDto(clinic),
+            ProtocolPreferences = ClinicPreferencesMapper.ToProtocolDto(clinic),
+            ColorThemePreferences = ClinicPreferencesMapper.ToColorThemeDto(clinic),
         };
 
         private Guid? GetClinicIdFromToken()

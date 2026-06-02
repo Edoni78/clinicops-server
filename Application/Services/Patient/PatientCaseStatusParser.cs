@@ -14,6 +14,7 @@ namespace ClinicOps.Application.Services.Patient
             {
                 "InProgress" => nameof(PatientCaseStatus.Waiting),
                 "Completed" => nameof(PatientCaseStatus.Finished),
+                "Closed" => nameof(PatientCaseStatus.Mbyllur),
                 _ => status.Trim()
             };
 
@@ -21,6 +22,6 @@ namespace ClinicOps.Application.Services.Patient
         }
 
         public static string AllowedStatusesMessage =>
-            "Invalid status. Use: Waiting, InConsultation, Finished.";
+            "Invalid status. Use: Waiting, InConsultation, Finished, Mbyllur.";
     }
 }

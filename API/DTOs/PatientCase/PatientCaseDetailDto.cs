@@ -16,6 +16,7 @@ namespace ClinicOps.API.DTOs.PatientCase
         public decimal? ServicePrice { get; set; }
         public string? AssignedDoctorUserId { get; set; }
         public string? AssignedDoctorName { get; set; }
+        public string? ProtocolNumber { get; set; }
     }
 
     public class PatientCaseDetailDto
@@ -37,9 +38,11 @@ namespace ClinicOps.API.DTOs.PatientCase
         public decimal? ServicePrice { get; set; }
         public string? AssignedDoctorUserId { get; set; }
         public string? AssignedDoctorName { get; set; }
+        public string? ProtocolNumber { get; set; }
         public VitalSignsSummaryDto? LatestVitals { get; set; }
         public MedicalReportSummaryDto? MedicalReport { get; set; }
         public ClinicVitalPreferencesDto VitalPreferences { get; set; } = new();
+        public ClinicProtocolPreferencesDto ProtocolPreferences { get; set; } = new();
     }
 
     public class VitalSignsSummaryDto

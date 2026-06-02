@@ -42,5 +42,17 @@ namespace ClinicOps.Domain.Entities
 
         /// <summary>Clinic preference: allow nurses to record heart rate (bpm).</summary>
         public bool EnableVitalHeartRate { get; set; } = true;
+
+        /// <summary>Use unique protocol numbers on patient cases and reports.</summary>
+        public bool UseProtocolNumber { get; set; }
+
+        /// <summary>Nurse may set or edit protocol number when UseProtocolNumber is true.</summary>
+        public bool ProtocolEditableByNurse { get; set; } = true;
+
+        /// <summary>Doctor may set or edit protocol number when UseProtocolNumber is true.</summary>
+        public bool ProtocolEditableByDoctor { get; set; } = true;
+
+        /// <summary>Dashboard accent color palette (default = original blue-gray).</summary>
+        public ClinicColorTheme ColorTheme { get; set; } = ClinicColorTheme.Default;
     }
 }

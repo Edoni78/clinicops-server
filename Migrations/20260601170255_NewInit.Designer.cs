@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace clinicops.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260601163353_NewINIT")]
-    partial class NewINIT
+    [Migration("20260601170255_NewInit")]
+    partial class NewInit
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -110,15 +110,15 @@ namespace clinicops.Migrations
                         {
                             Id = "SuperAdmin",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "653fb1e2-37aa-4a3e-acb3-9f6bc2886013",
-                            CreatedAt = new DateTime(2026, 6, 1, 16, 33, 52, 854, DateTimeKind.Utc).AddTicks(3889),
+                            ConcurrencyStamp = "beede5c5-2aa5-4b68-a72c-424bdb7a665e",
+                            CreatedAt = new DateTime(2026, 6, 1, 17, 2, 55, 214, DateTimeKind.Utc).AddTicks(1713),
                             Email = "superadmin@clinicops.local",
                             EmailConfirmed = true,
                             IsActive = true,
                             LockoutEnabled = false,
                             NormalizedEmail = "SUPERADMIN@CLINICOPS.LOCAL",
                             NormalizedUserName = "SUPERADMIN@CLINICOPS.LOCAL",
-                            PasswordHash = "AQAAAAIAAYagAAAAEK7s+iR2AMXT6/rgSW3/LjdWVIU7Jevc2mUlsS6Fda8zYRHXB7CKbKUr1gZenuogRA==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEPiMi+/6ujkxI1RuvXIR+I8nJjoNlHQGw31dDHISjrFe4OekZNZcgoIjRIxgYN+Olg==",
                             PhoneNumberConfirmed = false,
                             SecurityStamp = "STATIC-SECURITY-STAMP",
                             TwoFactorEnabled = false,
@@ -228,6 +228,15 @@ namespace clinicops.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
 
+                    b.Property<bool>("ProtocolEditableByDoctor")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("ProtocolEditableByNurse")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("UseProtocolNumber")
+                        .HasColumnType("tinyint(1)");
+
                     b.HasKey("Id");
 
                     b.ToTable("Clinics");
@@ -238,14 +247,17 @@ namespace clinicops.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             Address = "123 Test Street",
                             ClinicMode = 1,
-                            CreatedAt = new DateTime(2026, 6, 1, 16, 33, 52, 889, DateTimeKind.Utc).AddTicks(809),
+                            CreatedAt = new DateTime(2026, 6, 1, 17, 2, 55, 249, DateTimeKind.Utc).AddTicks(3725),
                             EnableVitalBloodPressure = true,
                             EnableVitalHeartRate = true,
                             EnableVitalTemperature = true,
                             EnableVitalWeight = true,
                             IsActive = true,
                             Name = "Default Test Clinic",
-                            Phone = "+1234567890"
+                            Phone = "+1234567890",
+                            ProtocolEditableByDoctor = true,
+                            ProtocolEditableByNurse = true,
+                            UseProtocolNumber = false
                         });
                 });
 
@@ -441,6 +453,10 @@ namespace clinicops.Migrations
                     b.Property<Guid>("PatientId")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("ProtocolNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
                     b.Property<Guid?>("ServiceId")
                         .HasColumnType("char(36)");
 
@@ -451,11 +467,12 @@ namespace clinicops.Migrations
 
                     b.HasIndex("AssignedDoctorUserId");
 
-                    b.HasIndex("ClinicId");
-
                     b.HasIndex("PatientId");
 
                     b.HasIndex("ServiceId");
+
+                    b.HasIndex("ClinicId", "ProtocolNumber")
+                        .IsUnique();
 
                     b.ToTable("PatientCases");
                 });

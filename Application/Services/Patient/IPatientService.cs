@@ -8,5 +8,10 @@ namespace ClinicOps.Application.Services.Patient
         Task<PatientResponseDto> RegisterPatientAtReceptionAsync(
             Guid clinicId,
             RegisterPatientRequest request);
+
+        Task<PatientResponseDto> OpenCaseForExistingPatientAsync(
+            Guid clinicId,
+            Guid patientId,
+            OpenPatientCaseRequest request);
     }
 }

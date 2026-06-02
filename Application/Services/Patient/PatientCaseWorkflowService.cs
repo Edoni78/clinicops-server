@@ -56,6 +56,25 @@ namespace ClinicOps.Application.Services.Patient
             if (@case == null)
                 throw new KeyNotFoundException("Patient case not found.");
 
+            var clinic = await _db.Clinics.AsNoTracking().FirstOrDefaultAsync(c => c.Id == clinicId);
+            if (clinic == null)
+                throw new KeyNotFoundException("Clinic not found.");
+
+            if (status == PatientCaseStatus.Finished)
+                PatientCaseProtocolHelper.EnsureProtocolBeforeFinish(clinic, @case);
+
+            if (status == PatientCaseStatus.Mbyllur)
+            {
+                if (@case.Status != PatientCaseStatus.Finished)
+                    throw new InvalidOperationException(
+                        "Vetëm rastet e përfunduara nga mjeku mund të mbyllen nga infermieri.");
+            }
+            else if (!IsAllowedTransition(@case.Status, status))
+            {
+                throw new InvalidOperationException(
+                    $"Nuk lejohet kalimi nga {@case.Status} në {status}.");
+            }
+
             if (status == PatientCaseStatus.InConsultation)
             {
                 var anotherInConsultation = await _db.PatientCases.AnyAsync(pc =>
@@ -73,5 +92,14 @@ namespace ClinicOps.Application.Services.Patient
             await _db.SaveChangesAsync();
             return status;
         }
+
+        private static bool IsAllowedTransition(PatientCaseStatus from, PatientCaseStatus to) =>
+            (from, to) switch
+            {
+                (PatientCaseStatus.Waiting, PatientCaseStatus.InConsultation) => true,
+                (PatientCaseStatus.InConsultation, PatientCaseStatus.Finished) => true,
+                (PatientCaseStatus.Finished, PatientCaseStatus.Mbyllur) => true,
+                _ => from == to,
+            };
     }
 }

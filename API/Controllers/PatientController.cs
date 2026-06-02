@@ -97,6 +97,55 @@ namespace ClinicOps.API.Controllers
         }
 
         /// <summary>
+        /// Open a new waiting case for an existing patient (reception return visit).
+        /// </summary>
+        [HttpPost("{id:guid}/open-case")]
+        [ProducesResponseType(typeof(PatientResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<PatientResponseDto>> OpenCaseForPatient(
+            Guid id,
+            [FromBody] OpenPatientCaseRequest request)
+        {
+            Guid clinicId;
+            var clinicIdClaim = User.FindFirst("clinicId")?.Value;
+            if (string.IsNullOrEmpty(clinicIdClaim))
+            {
+                if (request.ClinicId.HasValue)
+                    clinicId = request.ClinicId.Value;
+                else
+                    (_, clinicId) = await _clinicContextService.ResolveClinicIdAsync(User);
+            }
+            else
+            {
+                if (!Guid.TryParse(clinicIdClaim, out clinicId))
+                    return BadRequest("Invalid clinic ID in token.");
+            }
+
+            try
+            {
+                var result = await _patientService.OpenCaseForExistingPatientAsync(
+                    clinicId,
+                    id,
+                    request);
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? User.FindFirst("sub")?.Value;
+                await _auditLogService.TryLogAsync(
+                    "PatientCaseOpened",
+                    "PatientCase",
+                    result.PatientCaseId?.ToString(),
+                    clinicId,
+                    userId);
+
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Get all patients
         /// </summary>
         /// <param name="clinicId">Optional clinic ID filter (SuperAdmin only)</param>

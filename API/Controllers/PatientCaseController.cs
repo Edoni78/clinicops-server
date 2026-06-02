@@ -90,10 +90,14 @@ namespace ClinicOps.API.Controllers
             {
                 return NotFound(ex.Message);
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
+            }
         }
 
         /// <summary>
-        /// Nurse: submit/update vital signs for a patient case. Broadcasts to clinic via SignalR so doctor sees in real time.
+        /// Nurse: submit/update vital signs for a patient case. Updates case room via SignalR only.
         /// </summary>
         [HttpPost("{id:guid}/vitals")]
         [ProducesResponseType(typeof(VitalSignsDto), StatusCodes.Status200OK)]
@@ -116,15 +120,42 @@ namespace ClinicOps.API.Controllers
                 return NotFound(ex.Message);
             }
 
-            // Real-time: notify clinic (doctor panel) and optional case group
-            await _hubContext.Clients
-                .Group(ClinicHub.GroupPrefix + clinicId)
-                .SendAsync("VitalsUpdated", id, dto);
+            // Real-time: only case room (nurse on case page). Doctors are notified after status → InConsultation.
             await _hubContext.Clients
                 .Group("case_" + id)
                 .SendAsync("VitalsUpdated", id, dto);
 
             return Ok(dto);
+        }
+
+        /// <summary>
+        /// Set or update the unique protocol number for a case (when enabled in clinic preferences).
+        /// </summary>
+        [HttpPatch("{id:guid}/protocol")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateProtocolNumber(Guid id, [FromBody] UpdateProtocolNumberRequest request)
+        {
+            var (_, clinicId) = await ResolveClinicIdAsync();
+            try
+            {
+                var value = await _patientCaseCommandService.UpdateProtocolNumberAsync(
+                    id, clinicId, request.ProtocolNumber, User);
+                return Ok(new { id, protocolNumber = value });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
         /// <summary>
@@ -251,7 +282,7 @@ namespace ClinicOps.API.Controllers
         }
 
         /// <summary>
-        /// Update patient case status (Waiting → InConsultation → Finished).
+        /// Update patient case status (Waiting → InConsultation → Finished → Mbyllur).
         /// </summary>
         [HttpPatch("{id:guid}/status")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -260,6 +291,17 @@ namespace ClinicOps.API.Controllers
         {
             if (!PatientCaseStatusParser.TryParse(status, out var statusEnum))
                 return BadRequest(PatientCaseStatusParser.AllowedStatusesMessage);
+
+            if (statusEnum == PatientCaseStatus.Mbyllur
+                && !User.IsInRole("Nurse")
+                && !User.IsInRole("ClinicAdmin")
+                && !User.IsInRole("SuperAdmin"))
+            {
+                return StatusCode(
+                    StatusCodes.Status403Forbidden,
+                    "Vetëm infermieri ose administratori mund të mbyllë rastin në raporte.");
+            }
+
             var (_, clinicId) = await ResolveClinicIdAsync();
             try
             {

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace clinicops.Migrations
 {
     /// <inheritdoc />
-    public partial class NewINIT : Migration
+    public partial class NewInit : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -112,7 +112,10 @@ namespace clinicops.Migrations
                     EnableVitalWeight = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     EnableVitalBloodPressure = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     EnableVitalTemperature = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    EnableVitalHeartRate = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                    EnableVitalHeartRate = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    UseProtocolNumber = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    ProtocolEditableByNurse = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    ProtocolEditableByDoctor = table.Column<bool>(type: "tinyint(1)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -417,7 +420,9 @@ namespace clinicops.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     AssignedDoctorUserId = table.Column<string>(type: "varchar(255)", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    ServiceId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
+                    ServiceId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    ProtocolNumber = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
@@ -591,12 +596,12 @@ namespace clinicops.Migrations
             migrationBuilder.InsertData(
                 table: "AspNetUsers",
                 columns: new[] { "Id", "AccessFailedCount", "ClinicId", "ConcurrencyStamp", "CreatedAt", "DoctorDisplayName", "Email", "EmailConfirmed", "IsActive", "LockoutEnabled", "LockoutEnd", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "SecurityStamp", "SignatureUrl", "StampUrl", "TwoFactorEnabled", "UserName" },
-                values: new object[] { "SuperAdmin", 0, null, "653fb1e2-37aa-4a3e-acb3-9f6bc2886013", new DateTime(2026, 6, 1, 16, 33, 52, 854, DateTimeKind.Utc).AddTicks(3889), null, "superadmin@clinicops.local", true, true, false, null, "SUPERADMIN@CLINICOPS.LOCAL", "SUPERADMIN@CLINICOPS.LOCAL", "AQAAAAIAAYagAAAAEK7s+iR2AMXT6/rgSW3/LjdWVIU7Jevc2mUlsS6Fda8zYRHXB7CKbKUr1gZenuogRA==", null, false, "STATIC-SECURITY-STAMP", null, null, false, "superadmin@clinicops.local" });
+                values: new object[] { "SuperAdmin", 0, null, "beede5c5-2aa5-4b68-a72c-424bdb7a665e", new DateTime(2026, 6, 1, 17, 2, 55, 214, DateTimeKind.Utc).AddTicks(1713), null, "superadmin@clinicops.local", true, true, false, null, "SUPERADMIN@CLINICOPS.LOCAL", "SUPERADMIN@CLINICOPS.LOCAL", "AQAAAAIAAYagAAAAEPiMi+/6ujkxI1RuvXIR+I8nJjoNlHQGw31dDHISjrFe4OekZNZcgoIjRIxgYN+Olg==", null, false, "STATIC-SECURITY-STAMP", null, null, false, "superadmin@clinicops.local" });
 
             migrationBuilder.InsertData(
                 table: "Clinics",
-                columns: new[] { "Id", "Address", "ClinicMode", "CreatedAt", "Description", "EnableVitalBloodPressure", "EnableVitalHeartRate", "EnableVitalTemperature", "EnableVitalWeight", "IsActive", "LogoUrl", "Name", "Phone" },
-                values: new object[] { new Guid("11111111-1111-1111-1111-111111111111"), "123 Test Street", 1, new DateTime(2026, 6, 1, 16, 33, 52, 889, DateTimeKind.Utc).AddTicks(809), null, true, true, true, true, true, null, "Default Test Clinic", "+1234567890" });
+                columns: new[] { "Id", "Address", "ClinicMode", "CreatedAt", "Description", "EnableVitalBloodPressure", "EnableVitalHeartRate", "EnableVitalTemperature", "EnableVitalWeight", "IsActive", "LogoUrl", "Name", "Phone", "ProtocolEditableByDoctor", "ProtocolEditableByNurse", "UseProtocolNumber" },
+                values: new object[] { new Guid("11111111-1111-1111-1111-111111111111"), "123 Test Street", 1, new DateTime(2026, 6, 1, 17, 2, 55, 249, DateTimeKind.Utc).AddTicks(3725), null, true, true, true, true, true, null, "Default Test Clinic", "+1234567890", true, true, false });
 
             migrationBuilder.InsertData(
                 table: "AspNetUserRoles",
@@ -672,9 +677,10 @@ namespace clinicops.Migrations
                 column: "AssignedDoctorUserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PatientCases_ClinicId",
+                name: "IX_PatientCases_ClinicId_ProtocolNumber",
                 table: "PatientCases",
-                column: "ClinicId");
+                columns: new[] { "ClinicId", "ProtocolNumber" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_PatientCases_PatientId",

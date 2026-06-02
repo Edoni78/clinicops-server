@@ -32,6 +32,9 @@ namespace ClinicOps.Application.Services.Patient
                 var doctorUserId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirst("sub")?.Value;
                 if (!string.IsNullOrWhiteSpace(doctorUserId))
                     query = query.Where(pc => pc.AssignedDoctorUserId == doctorUserId);
+
+                // Nurse triage first: doctors only see cases ready for consultation.
+                query = query.Where(pc => pc.Status != PatientCaseStatus.Waiting);
             }
 
             if (!string.IsNullOrEmpty(status) && PatientCaseStatusParser.TryParse(status, out var statusEnum))
@@ -54,7 +57,8 @@ namespace ClinicOps.Application.Services.Patient
                     AssignedDoctorUserId = pc.AssignedDoctorUserId,
                     AssignedDoctorName = pc.AssignedDoctor != null
                         ? (pc.AssignedDoctor.DoctorDisplayName ?? pc.AssignedDoctor.Email ?? pc.AssignedDoctor.UserName)
-                        : null
+                        : null,
+                    ProtocolNumber = pc.ProtocolNumber
                 })
                 .ToListAsync();
         }
@@ -77,6 +81,10 @@ namespace ClinicOps.Application.Services.Patient
                 var doctorUserId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirst("sub")?.Value;
                 if (!string.IsNullOrWhiteSpace(doctorUserId) && @case.AssignedDoctorUserId != doctorUserId)
                     throw new UnauthorizedAccessException("This patient case is assigned to another doctor.");
+
+                if (@case.Status == PatientCaseStatus.Waiting)
+                    throw new UnauthorizedAccessException(
+                        "Pacienti ende nuk është dërguar nga infermieri. Pritni derisa infermieri të klikojë «Vazhdo te mjeku».");
             }
 
             var latestVitals = await _db.VitalSigns
@@ -130,7 +138,9 @@ namespace ClinicOps.Application.Services.Patient
                     CreatedAt = report.CreatedAt,
                     DoctorId = report.DoctorUserId ?? ""
                 },
-                VitalPreferences = ClinicVitalPreferencesMapper.ToDto(@case.Clinic)
+                ProtocolNumber = @case.ProtocolNumber,
+                VitalPreferences = ClinicPreferencesMapper.ToVitalDto(@case.Clinic),
+                ProtocolPreferences = ClinicPreferencesMapper.ToProtocolDto(@case.Clinic)
             };
         }
 
