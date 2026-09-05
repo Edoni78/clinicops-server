@@ -26,20 +26,12 @@ namespace ClinicOps.Application.Services.ClinicSettings
 
         public static void ValidateSubmit(SubmitVitalSignsRequest request, Clinic clinic)
         {
-            if (request.WeightKg.HasValue && !clinic.EnableVitalWeight)
-                throw new InvalidOperationException("Pesha nuk është e aktivizuar për këtë klinikë.");
-
-            if ((request.SystolicPressure.HasValue || request.DiastolicPressure.HasValue) && !clinic.EnableVitalBloodPressure)
-                throw new InvalidOperationException("Presioni i gjakut nuk është i aktivizuar për këtë klinikë.");
-
-            if (request.TemperatureC.HasValue && !clinic.EnableVitalTemperature)
-                throw new InvalidOperationException("Temperatura nuk është e aktivizuar për këtë klinikë.");
-
-            if (request.HeartRate.HasValue && !clinic.EnableVitalHeartRate)
-                throw new InvalidOperationException("Rrahjet e zemrës nuk janë të aktivizuara për këtë klinikë.");
-
-            if (!HasAnyEnabledValue(request, clinic))
-                throw new InvalidOperationException("Jepni të paktën një shenjë vitale të aktivizuar.");
+            clinic.EnsureVitalSubmissionAllowed(
+                request.WeightKg,
+                request.SystolicPressure,
+                request.DiastolicPressure,
+                request.TemperatureC,
+                request.HeartRate);
         }
 
         public static bool HasAnyEnabledValue(SubmitVitalSignsRequest request, Clinic clinic)

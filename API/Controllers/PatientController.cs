@@ -1,14 +1,9 @@
 using ClinicOps.API.DTOs.Patient;
 using ClinicOps.Application.Services.Common;
-using ClinicOps.Application.Services.Gdpr;
+using ClinicOps.Application.Services.Audit;
 using ClinicOps.Application.Services.Patient;
-using ClinicOps.Domain.Entities;
-using ClinicOps.Domain.Enums;
-using ClinicOps.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace ClinicOps.API.Controllers
 {
@@ -20,33 +15,20 @@ namespace ClinicOps.API.Controllers
         private readonly IPatientService _patientService;
         private readonly IPatientQueryService _patientQueryService;
         private readonly IClinicContextService _clinicContextService;
-        private readonly ApplicationDbContext _db;
         private readonly IAuditLogService _auditLogService;
 
         public PatientController(
             IPatientService patientService,
             IPatientQueryService patientQueryService,
             IClinicContextService clinicContextService,
-            ApplicationDbContext db,
             IAuditLogService auditLogService)
         {
             _patientService = patientService;
             _patientQueryService = patientQueryService;
             _clinicContextService = clinicContextService;
-            _db = db;
             _auditLogService = auditLogService;
         }
 
-        /// <summary>
-        /// Register a patient at reception and create a waiting case
-        /// </summary>
-        /// <param name="request">Patient registration details</param>
-        /// <returns>Registered patient with case information</returns>
-        /// <response code="200">Patient registered successfully</response>
-        /// <response code="400">Invalid request data</response>
-        /// <response code="401">Unauthorized - Invalid or missing token</response>
-        /// <response code="403">Forbidden - SuperAdmin cannot register patients</response>
-        /// <response code="500">Internal server error</response>
         [HttpPost("register")]
         [ProducesResponseType(typeof(PatientResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -56,33 +38,24 @@ namespace ClinicOps.API.Controllers
             [FromBody] RegisterPatientRequest request)
         {
             Guid clinicId;
-            var clinicIdClaim = User.FindFirst("clinicId")?.Value;
-            if (string.IsNullOrEmpty(clinicIdClaim))
+            try
             {
-                if (request.ClinicId.HasValue)
-                {
-                    clinicId = request.ClinicId.Value;
-                }
-                else
-                {
-                    (_, clinicId) = await _clinicContextService.ResolveClinicIdAsync(User);
-                }
+                clinicId = await ResolveRegistrationClinicIdAsync(request.ClinicId);
             }
-            else
+            catch (InvalidOperationException ex)
             {
-                if (!Guid.TryParse(clinicIdClaim, out clinicId))
-                {
-                    return BadRequest("Invalid clinic ID in token.");
-                }
+                return BadRequest(ex.Message);
             }
 
             try
             {
-                var result = await _patientService.RegisterPatientAtReceptionAsync(
+                var result = await _patientService.RegisterPatientAtReceptionAsync(clinicId, request);
+                await _auditLogService.TryLogAsync(
+                    "PatientCreated",
+                    "Patient",
+                    result.Id.ToString(),
                     clinicId,
-                    request);
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
-                await _auditLogService.TryLogAsync("PatientCreated", "Patient", result.Id.ToString(), clinicId, userId);
+                    User.GetUserId());
 
                 return Ok(result);
             }
@@ -96,9 +69,6 @@ namespace ClinicOps.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Open a new waiting case for an existing patient (reception return visit).
-        /// </summary>
         [HttpPost("{id:guid}/open-case")]
         [ProducesResponseType(typeof(PatientResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -108,34 +78,24 @@ namespace ClinicOps.API.Controllers
             [FromBody] OpenPatientCaseRequest request)
         {
             Guid clinicId;
-            var clinicIdClaim = User.FindFirst("clinicId")?.Value;
-            if (string.IsNullOrEmpty(clinicIdClaim))
+            try
             {
-                if (request.ClinicId.HasValue)
-                    clinicId = request.ClinicId.Value;
-                else
-                    (_, clinicId) = await _clinicContextService.ResolveClinicIdAsync(User);
+                clinicId = await ResolveRegistrationClinicIdAsync(request.ClinicId);
             }
-            else
+            catch (InvalidOperationException ex)
             {
-                if (!Guid.TryParse(clinicIdClaim, out clinicId))
-                    return BadRequest("Invalid clinic ID in token.");
+                return BadRequest(ex.Message);
             }
 
             try
             {
-                var result = await _patientService.OpenCaseForExistingPatientAsync(
-                    clinicId,
-                    id,
-                    request);
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                    ?? User.FindFirst("sub")?.Value;
+                var result = await _patientService.OpenCaseForExistingPatientAsync(clinicId, id, request);
                 await _auditLogService.TryLogAsync(
                     "PatientCaseOpened",
                     "PatientCase",
                     result.PatientCaseId?.ToString(),
                     clinicId,
-                    userId);
+                    User.GetUserId());
 
                 return Ok(result);
             }
@@ -145,13 +105,6 @@ namespace ClinicOps.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Get all patients
-        /// </summary>
-        /// <param name="clinicId">Optional clinic ID filter (SuperAdmin only)</param>
-        /// <returns>List of patients</returns>
-        /// <response code="200">Returns list of patients</response>
-        /// <response code="401">Unauthorized - Invalid or missing token</response>
         [HttpGet]
         [ProducesResponseType(typeof(List<PatientResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -160,8 +113,7 @@ namespace ClinicOps.API.Controllers
         {
             try
             {
-                var result = await _patientQueryService.GetAllPatientsAsync(clinicId, User);
-                return Ok(result);
+                return Ok(await _patientQueryService.GetAllPatientsAsync(clinicId, User));
             }
             catch (InvalidOperationException ex)
             {
@@ -169,9 +121,6 @@ namespace ClinicOps.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Get EMR history for a specific patient, including consult dates, doctor, vitals, diagnosis, and therapy.
-        /// </summary>
         [HttpGet("{id:guid}/emr")]
         [ProducesResponseType(typeof(PatientEmrDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -180,8 +129,7 @@ namespace ClinicOps.API.Controllers
         {
             try
             {
-                var result = await _patientQueryService.GetPatientEmrAsync(id, doctorView, User);
-                return Ok(result);
+                return Ok(await _patientQueryService.GetPatientEmrAsync(id, doctorView, User));
             }
             catch (UnauthorizedAccessException)
             {
@@ -193,9 +141,6 @@ namespace ClinicOps.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Clinic staff/SuperAdmin: soft delete patient (marks inactive).
-        /// </summary>
         [HttpDelete("{id:guid}")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -217,6 +162,23 @@ namespace ClinicOps.API.Controllers
             {
                 return NotFound(ex.Message);
             }
+        }
+
+        /// <summary>
+        /// Preserves prior registration clinic resolution:
+        /// token clinicId if present; else request body clinicId; else default via ClinicContextService.
+        /// </summary>
+        private async Task<Guid> ResolveRegistrationClinicIdAsync(Guid? requestClinicId)
+        {
+            var fromToken = _clinicContextService.GetClinicIdFromToken(User);
+            if (fromToken.HasValue)
+                return fromToken.Value;
+
+            if (requestClinicId.HasValue)
+                return requestClinicId.Value;
+
+            var (_, clinicId) = await _clinicContextService.ResolveClinicIdAsync(User);
+            return clinicId;
         }
     }
 }

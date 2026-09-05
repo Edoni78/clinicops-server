@@ -1,11 +1,7 @@
 using ClinicOps.API.DTOs.ClinicUser;
-using ClinicOps.Domain.Entities;
-using ClinicOps.Domain.Enums;
-using ClinicOps.Infrastructure.Data;
+using ClinicOps.Application.Services.ClinicUsers;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace ClinicOps.API.Controllers
 {
@@ -14,14 +10,11 @@ namespace ClinicOps.API.Controllers
     [Authorize]
     public class ClinicUserController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
-        private readonly UserManager<ApplicationUser> _userManager;
-        private static readonly string[] AllowedRoles = { "Doctor", "Nurse", "LabTechnician" };
+        private readonly IClinicUserService _clinicUserService;
 
-        public ClinicUserController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+        public ClinicUserController(IClinicUserService clinicUserService)
         {
-            _db = db;
-            _userManager = userManager;
+            _clinicUserService = clinicUserService;
         }
 
         /// <summary>
@@ -34,35 +27,14 @@ namespace ClinicOps.API.Controllers
             [FromQuery] Guid? clinicId = null,
             [FromQuery] string? role = null)
         {
-            var (_, resolvedClinicId) = await ResolveClinicIdAsync(clinicId);
-            if (!resolvedClinicId.HasValue)
-                return BadRequest("ClinicId required for SuperAdmin, or login as ClinicAdmin.");
-
-            var users = await _userManager.Users
-                .Where(u => u.ClinicId == resolvedClinicId.Value && u.IsActive)
-                .ToListAsync();
-
-            var result = new List<ClinicUserListItemDto>();
-            foreach (var u in users)
+            try
             {
-                var roles = await _userManager.GetRolesAsync(u);
-                var r = roles.FirstOrDefault(AllowedRoles.Contains) ?? roles.FirstOrDefault();
-                if (r == "ClinicAdmin") continue;
-                result.Add(new ClinicUserListItemDto
-                {
-                    Id = u.Id,
-                    Email = u.Email!,
-                    DisplayName = u.DoctorDisplayName ?? u.Email ?? u.UserName ?? u.Id,
-                    Role = r ?? "",
-                    IsActive = u.IsActive,
-                    CreatedAt = u.CreatedAt
-                });
+                return Ok(await _clinicUserService.ListAsync(User, clinicId, role));
             }
-
-            if (!string.IsNullOrEmpty(role) && AllowedRoles.Contains(role, StringComparer.OrdinalIgnoreCase))
-                result = result.Where(x => x.Role.Equals(role, StringComparison.OrdinalIgnoreCase)).ToList();
-
-            return Ok(result.OrderBy(x => x.Role).ThenBy(x => x.DisplayName).ToList());
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -76,63 +48,15 @@ namespace ClinicOps.API.Controllers
             [FromBody] CreateClinicUserRequest request,
             [FromQuery] Guid? clinicId = null)
         {
-            var (_, resolvedClinicId) = await ResolveClinicIdAsync(clinicId);
-            if (!resolvedClinicId.HasValue)
-                return BadRequest("ClinicId required for SuperAdmin, or login as ClinicAdmin.");
-
-            var role = request.Role?.Trim();
-            if (string.IsNullOrEmpty(role) || !AllowedRoles.Contains(role, StringComparer.OrdinalIgnoreCase))
-                return BadRequest($"Role must be one of: {string.Join(", ", AllowedRoles)}.");
-
-            var existing = await _userManager.FindByEmailAsync(request.Email);
-            if (existing != null)
-                return BadRequest("Email already in use.");
-
-            var clinic = await _db.Clinics.FindAsync(resolvedClinicId.Value);
-            if (clinic == null)
-                return BadRequest("Clinic not found.");
-
-            if (clinic.ClinicMode == ClinicMode.SoloDoctor &&
-                (role.Equals("Nurse", StringComparison.OrdinalIgnoreCase) ||
-                 role.Equals("LabTechnician", StringComparison.OrdinalIgnoreCase)))
+            try
             {
-                return BadRequest("This clinic mode does not include nurse or laboratory staff workflow.");
+                var dto = await _clinicUserService.CreateAsync(request, User, clinicId);
+                return CreatedAtAction(nameof(List), dto);
             }
-
-            var displayName = request.DisplayName?.Trim();
-            if (string.IsNullOrEmpty(displayName))
-                return BadRequest("DisplayName is required.");
-            if (displayName.Length > 200)
-                return BadRequest("DisplayName must be at most 200 characters.");
-
-            var user = new ApplicationUser
+            catch (InvalidOperationException ex)
             {
-                UserName = request.Email,
-                Email = request.Email,
-                NormalizedUserName = request.Email.ToUpperInvariant(),
-                NormalizedEmail = request.Email.ToUpperInvariant(),
-                EmailConfirmed = true,
-                ClinicId = resolvedClinicId.Value,
-                DoctorDisplayName = displayName,
-                CreatedAt = DateTime.UtcNow,
-                IsActive = true
-            };
-
-            var createResult = await _userManager.CreateAsync(user, request.Password);
-            if (!createResult.Succeeded)
-                return BadRequest(string.Join("; ", createResult.Errors.Select(e => e.Description)));
-
-            await _userManager.AddToRoleAsync(user, role);
-
-            return CreatedAtAction(nameof(List), new ClinicUserListItemDto
-            {
-                Id = user.Id,
-                Email = user.Email!,
-                DisplayName = user.DoctorDisplayName ?? user.Email!,
-                Role = role,
-                IsActive = user.IsActive,
-                CreatedAt = user.CreatedAt
-            });
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -146,41 +70,19 @@ namespace ClinicOps.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Delete(string id, [FromQuery] Guid? clinicId = null)
         {
-            var (_, resolvedClinicId) = await ResolveClinicIdAsync(clinicId);
-            if (!resolvedClinicId.HasValue)
-                return BadRequest("ClinicId required for SuperAdmin, or login as ClinicAdmin.");
-
-            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == id);
-            if (user == null)
-                return NotFound("User not found.");
-
-            if (user.ClinicId != resolvedClinicId.Value)
-                return NotFound("User not found in this clinic.");
-
-            var roles = await _userManager.GetRolesAsync(user);
-            var isAllowedStaff = roles.Any(r => AllowedRoles.Contains(r, StringComparer.OrdinalIgnoreCase));
-            if (!isAllowedStaff)
-                return BadRequest("Only clinic staff users can be deleted from this endpoint.");
-
-            var result = await _userManager.DeleteAsync(user);
-            if (!result.Succeeded)
-                return BadRequest(string.Join("; ", result.Errors.Select(e => e.Description)));
-
-            return NoContent();
-        }
-
-        private async Task<(bool isSuperAdmin, Guid? clinicId)> ResolveClinicIdAsync(Guid? fromQuery = null)
-        {
-            var clinicIdClaim = User.FindFirst("clinicId")?.Value;
-            if (!string.IsNullOrEmpty(clinicIdClaim) && Guid.TryParse(clinicIdClaim, out var fromToken))
-                return (false, fromToken);
-            if (fromQuery.HasValue)
-                return (true, fromQuery.Value);
-            var defaultId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-            var clinic = await _db.Clinics.FindAsync(defaultId);
-            if (clinic != null)
-                return (true, defaultId);
-            return (true, null);
+            try
+            {
+                await _clinicUserService.DeleteAsync(id, User, clinicId);
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
     }
 }

@@ -1,7 +1,7 @@
 using ClinicOps.API.DTOs.PatientCase;
 using ClinicOps.Application.Services.ClinicSettings;
-using ClinicOps.Application.Services.Gdpr;
-using ClinicOps.Domain.Entities;
+using ClinicOps.Application.Services.Common;
+using ClinicOps.Application.Services.Audit;
 using ClinicOps.Domain.Enums;
 using ClinicOps.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -13,11 +13,16 @@ namespace ClinicOps.Application.Services.Patient
     {
         private readonly ApplicationDbContext _db;
         private readonly IAuditLogService _auditLogService;
+        private readonly IClinicContextService _clinicContextService;
 
-        public PatientCaseQueryService(ApplicationDbContext db, IAuditLogService auditLogService)
+        public PatientCaseQueryService(
+            ApplicationDbContext db,
+            IAuditLogService auditLogService,
+            IClinicContextService clinicContextService)
         {
             _db = db;
             _auditLogService = auditLogService;
+            _clinicContextService = clinicContextService;
         }
 
         public async Task<List<PatientCaseListItemDto>> ListAsync(string? status, ClaimsPrincipal user)
@@ -133,6 +138,7 @@ namespace ClinicOps.Application.Services.Patient
                 {
                     Id = report.Id,
                     Anamneza = report.Anamneza,
+                    Ekzaminimi = report.Ekzaminimi,
                     Diagnosis = report.Diagnosis,
                     Therapy = report.Therapy,
                     CreatedAt = report.CreatedAt,
@@ -144,30 +150,7 @@ namespace ClinicOps.Application.Services.Patient
             };
         }
 
-        private async Task<(bool isSuperAdmin, Guid clinicId)> ResolveClinicIdAsync(ClaimsPrincipal user)
-        {
-            var clinicIdClaim = user.FindFirst("clinicId")?.Value;
-            if (!string.IsNullOrEmpty(clinicIdClaim) && Guid.TryParse(clinicIdClaim, out var fromToken))
-                return (false, fromToken);
-
-            var defaultId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-            var clinic = await _db.Clinics.FindAsync(defaultId);
-            if (clinic == null)
-            {
-                clinic = new Clinic
-                {
-                    Id = defaultId,
-                    Name = "Default Test Clinic",
-                    Address = "123 Test Street",
-                    Phone = "+1234567890",
-                    ClinicMode = ClinicMode.FullTeam,
-                    CreatedAt = DateTime.UtcNow,
-                    IsActive = true
-                };
-                _db.Clinics.Add(clinic);
-                await _db.SaveChangesAsync();
-            }
-            return (true, defaultId);
-        }
+        private Task<(bool isSuperAdmin, Guid clinicId)> ResolveClinicIdAsync(ClaimsPrincipal user) =>
+            _clinicContextService.ResolveClinicIdAsync(user);
     }
 }

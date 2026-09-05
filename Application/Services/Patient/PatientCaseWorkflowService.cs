@@ -1,4 +1,5 @@
-using ClinicOps.Application.Services.Gdpr;
+using ClinicOps.Application.Services.Audit;
+using ClinicOps.Application.Services.Common;
 using ClinicOps.Domain.Enums;
 using ClinicOps.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -42,38 +43,33 @@ namespace ClinicOps.Application.Services.Patient
             _db.PatientCases.Remove(@case);
             await _db.SaveChangesAsync();
 
-            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst("sub")?.Value;
-            await _auditLogService.TryLogAsync("PatientDeleted", "PatientCase", caseId.ToString(), @case.ClinicId, userId);
-
+            await _auditLogService.TryLogAsync("PatientDeleted", "PatientCase", caseId.ToString(), @case.ClinicId, user.GetUserId());
             return @case.ClinicId;
         }
 
-        public async Task<PatientCaseStatus> UpdateStatusAsync(Guid caseId, PatientCaseStatus status, Guid clinicId)
+        public async Task<PatientCaseStatus> UpdateStatusAsync(
+            Guid caseId,
+            PatientCaseStatus status,
+            Guid clinicId,
+            ClaimsPrincipal user)
         {
+            if (status == PatientCaseStatus.Mbyllur
+                && !user.IsInRole("Nurse")
+                && !user.IsInRole("ClinicAdmin")
+                && !user.IsInRole("SuperAdmin"))
+            {
+                throw new UnauthorizedAccessException(
+                    "Vetëm infermieri ose administratori mund të mbyllë rastin në raporte.");
+            }
+
             var @case = await _db.PatientCases
                 .FirstOrDefaultAsync(pc => pc.Id == caseId && pc.ClinicId == clinicId);
-
             if (@case == null)
                 throw new KeyNotFoundException("Patient case not found.");
 
             var clinic = await _db.Clinics.AsNoTracking().FirstOrDefaultAsync(c => c.Id == clinicId);
             if (clinic == null)
                 throw new KeyNotFoundException("Clinic not found.");
-
-            if (status == PatientCaseStatus.Finished)
-                PatientCaseProtocolHelper.EnsureProtocolBeforeFinish(clinic, @case);
-
-            if (status == PatientCaseStatus.Mbyllur)
-            {
-                if (@case.Status != PatientCaseStatus.Finished)
-                    throw new InvalidOperationException(
-                        "Vetëm rastet e përfunduara nga mjeku mund të mbyllen nga infermieri.");
-            }
-            else if (!IsAllowedTransition(@case.Status, status))
-            {
-                throw new InvalidOperationException(
-                    $"Nuk lejohet kalimi nga {@case.Status} në {status}.");
-            }
 
             if (status == PatientCaseStatus.InConsultation)
             {
@@ -82,24 +78,13 @@ namespace ClinicOps.Application.Services.Patient
                     && pc.Id != caseId
                     && pc.Status == PatientCaseStatus.InConsultation);
                 if (anotherInConsultation)
-                    throw new InvalidOperationException("Mjeku ka tashmë një pacient në konsultim. Përfundoni vizitën aktuale para se të hapni një tjetër.");
+                    throw new InvalidOperationException(
+                        "Mjeku ka tashmë një pacient në konsultim. Përfundoni vizitën aktuale para se të hapni një tjetër.");
             }
 
-            @case.Status = status;
-            if (status == PatientCaseStatus.Finished)
-                @case.CompletedAt = DateTime.UtcNow;
-
+            @case.TransitionTo(status, clinic);
             await _db.SaveChangesAsync();
             return status;
         }
-
-        private static bool IsAllowedTransition(PatientCaseStatus from, PatientCaseStatus to) =>
-            (from, to) switch
-            {
-                (PatientCaseStatus.Waiting, PatientCaseStatus.InConsultation) => true,
-                (PatientCaseStatus.InConsultation, PatientCaseStatus.Finished) => true,
-                (PatientCaseStatus.Finished, PatientCaseStatus.Mbyllur) => true,
-                _ => from == to,
-            };
     }
 }

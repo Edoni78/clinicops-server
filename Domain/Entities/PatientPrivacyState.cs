@@ -12,5 +12,28 @@ namespace ClinicOps.Domain.Entities
 
         public DateTime? DeletedAtUtc { get; set; }
         public DateTime? AnonymizedAtUtc { get; set; }
+
+        public static PatientPrivacyState CreateAnonymized(Guid patientId)
+        {
+            return new PatientPrivacyState
+            {
+                PatientId = patientId,
+                IsDeleted = false,
+                IsAnonymized = true,
+                AnonymizedAtUtc = DateTime.UtcNow
+            };
+        }
+
+        public void MarkAnonymized()
+        {
+            IsAnonymized = true;
+            AnonymizedAtUtc = DateTime.UtcNow;
+        }
+
+        public void MarkDeleted()
+        {
+            IsDeleted = true;
+            DeletedAtUtc = DateTime.UtcNow;
+        }
     }
 }

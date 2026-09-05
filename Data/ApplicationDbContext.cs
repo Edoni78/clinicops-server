@@ -26,6 +26,7 @@ namespace ClinicOps.Infrastructure.Data
         public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
         public DbSet<PatientConsent> PatientConsents => Set<PatientConsent>();
         public DbSet<PatientPrivacyState> PatientPrivacyStates => Set<PatientPrivacyState>();
+        public DbSet<PatientMigration> PatientMigrations => Set<PatientMigration>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -120,6 +121,15 @@ namespace ClinicOps.Infrastructure.Data
                 .WithMany()
                 .HasForeignKey(s => s.ClinicId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<PatientMigration>()
+                .HasOne(m => m.Clinic)
+                .WithMany()
+                .HasForeignKey(m => m.ClinicId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<PatientMigration>()
+                .HasIndex(m => new { m.ClinicId, m.CreatedAtUtc });
 
             // ==============================
             // SEED SUPER ADMIN

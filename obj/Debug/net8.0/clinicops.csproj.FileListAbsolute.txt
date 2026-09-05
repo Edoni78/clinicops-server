@@ -133,3 +133,10 @@ C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\Sys
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\System.Text.Json.dll
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\WebDriverBiDi.dll
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\runtimes\browser\lib\net8.0\System.Text.Encodings.Web.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\ClosedXML.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\ClosedXML.Parser.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\DocumentFormat.OpenXml.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\DocumentFormat.OpenXml.Framework.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\ExcelNumberFormat.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\RBush.dll
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\System.IO.Packaging.dll

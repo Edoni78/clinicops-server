@@ -56,6 +56,7 @@ namespace ClinicOps.Application.Services.Pdf
     public class MedicalReportModel
     {
         public string? Anamneza { get; set; }
+        public string? Ekzaminimi { get; set; }
         public string Diagnosis { get; set; } = null!;
         public string Therapy { get; set; } = null!;
         public DateTime CreatedAt { get; set; }

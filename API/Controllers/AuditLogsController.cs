@@ -1,5 +1,5 @@
-using ClinicOps.API.DTOs.Gdpr;
-using ClinicOps.Application.Services.Gdpr;
+using ClinicOps.API.DTOs.Audit;
+using ClinicOps.Application.Services.Audit;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

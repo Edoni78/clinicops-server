@@ -107,15 +107,15 @@ namespace clinicops.Migrations
                         {
                             Id = "SuperAdmin",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "e8c16ed8-d218-4c80-8bcf-7aefead6cfb8",
-                            CreatedAt = new DateTime(2026, 6, 2, 7, 55, 59, 346, DateTimeKind.Utc).AddTicks(4535),
+                            ConcurrencyStamp = "e5ef3c08-20a4-45e1-b738-1325d1432b08",
+                            CreatedAt = new DateTime(2026, 9, 5, 13, 19, 21, 658, DateTimeKind.Utc).AddTicks(9920),
                             Email = "superadmin@clinicops.local",
                             EmailConfirmed = true,
                             IsActive = true,
                             LockoutEnabled = false,
                             NormalizedEmail = "SUPERADMIN@CLINICOPS.LOCAL",
                             NormalizedUserName = "SUPERADMIN@CLINICOPS.LOCAL",
-                            PasswordHash = "AQAAAAIAAYagAAAAEFvzYXSrQQQBtOqDrg+Z1uhnSduN/2L2NzWW64ZyzxPcMyGGVELQbgUPaYX8snWo+Q==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEA60ZdH9vqmATD0L0k8jll7vG2ibPuItmKbXJgXvo+QQ5J9eRfiCXH4o9ccYrW/VWg==",
                             PhoneNumberConfirmed = false,
                             SecurityStamp = "STATIC-SECURITY-STAMP",
                             TwoFactorEnabled = false,
@@ -248,7 +248,7 @@ namespace clinicops.Migrations
                             Address = "123 Test Street",
                             ClinicMode = 1,
                             ColorTheme = 0,
-                            CreatedAt = new DateTime(2026, 6, 2, 7, 55, 59, 381, DateTimeKind.Utc).AddTicks(3416),
+                            CreatedAt = new DateTime(2026, 9, 5, 13, 19, 21, 694, DateTimeKind.Utc).AddTicks(2195),
                             EnableVitalBloodPressure = true,
                             EnableVitalHeartRate = true,
                             EnableVitalTemperature = true,
@@ -368,6 +368,10 @@ namespace clinicops.Migrations
 
                     b.Property<string>("DoctorUserId")
                         .HasColumnType("longtext");
+
+                    b.Property<string>("Ekzaminimi")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
 
                     b.Property<Guid>("PatientCaseId")
                         .HasColumnType("char(36)");
@@ -517,6 +521,67 @@ namespace clinicops.Migrations
                     b.HasIndex("PatientId");
 
                     b.ToTable("PatientConsents");
+                });
+
+            modelBuilder.Entity("ClinicOps.Domain.Entities.PatientMigration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("ClinicId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("CreatedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.Property<int>("DuplicateRows")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ImportedRows")
+                        .HasColumnType("int");
+
+                    b.Property<int>("InvalidRows")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MappingJson")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<DateTime?>("PreviewedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StoredFileName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<int>("TotalRows")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ValidRows")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClinicId", "CreatedAtUtc");
+
+                    b.ToTable("PatientMigrations");
                 });
 
             modelBuilder.Entity("ClinicOps.Domain.Entities.PatientPrivacyState", b =>
@@ -896,6 +961,17 @@ namespace clinicops.Migrations
                         .IsRequired();
 
                     b.Navigation("Patient");
+                });
+
+            modelBuilder.Entity("ClinicOps.Domain.Entities.PatientMigration", b =>
+                {
+                    b.HasOne("ClinicOps.Domain.Entities.Clinic", "Clinic")
+                        .WithMany()
+                        .HasForeignKey("ClinicId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Clinic");
                 });
 
             modelBuilder.Entity("ClinicOps.Domain.Entities.PatientPrivacyState", b =>

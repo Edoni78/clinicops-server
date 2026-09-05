@@ -75,7 +75,7 @@ namespace ClinicOps.Application.Services.Patient
                     request.Notes);
             }
 
-            return await BuildPatientResponseAsync(patient, patientCase, assignedDoctor);
+            return BuildPatientResponse(patient, patientCase, assignedDoctor);
         }
 
         public async Task<PatientResponseDto> OpenCaseForExistingPatientAsync(
@@ -106,7 +106,7 @@ namespace ClinicOps.Application.Services.Patient
                 assignedDoctor.Id,
                 request.Notes);
 
-            return await BuildPatientResponseAsync(patient, patientCase, assignedDoctor);
+            return BuildPatientResponse(patient, patientCase, assignedDoctor);
         }
 
         private async Task<PatientCase> CreateOrReuseWaitingCaseAsync(
@@ -123,30 +123,18 @@ namespace ClinicOps.Application.Services.Patient
 
             if (activeCase != null)
             {
-                if (!string.IsNullOrEmpty(notes))
-                    activeCase.Notes = notes;
-
-                activeCase.AssignedDoctorUserId = assignedDoctorUserId;
+                activeCase.UpdateWaitingAssignment(assignedDoctorUserId, notes);
                 await _db.SaveChangesAsync();
                 return activeCase;
             }
 
-            var patientCase = new PatientCase
-            {
-                ClinicId = clinicId,
-                PatientId = patientId,
-                Status = PatientCaseStatus.Waiting,
-                Notes = notes,
-                AssignedDoctorUserId = assignedDoctorUserId,
-                CreatedAt = DateTime.UtcNow
-            };
-
+            var patientCase = PatientCase.OpenWaiting(clinicId, patientId, assignedDoctorUserId, notes);
             _db.PatientCases.Add(patientCase);
             await _db.SaveChangesAsync();
             return patientCase;
         }
 
-        private async Task<PatientResponseDto> BuildPatientResponseAsync(
+        private static PatientResponseDto BuildPatientResponse(
             Domain.Entities.Patient patient,
             PatientCase? patientCase,
             ApplicationUser assignedDoctor)

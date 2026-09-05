@@ -1,7 +1,4 @@
 using ClinicOps.API.DTOs.Vitals;
-using ClinicOps.Application.Services.ClinicSettings;
-using ClinicOps.Domain.Entities;
-using ClinicOps.Domain.Enums;
 using ClinicOps.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -23,28 +20,18 @@ namespace ClinicOps.Application.Services.Patient
             if (clinic == null)
                 throw new KeyNotFoundException("Clinic not found.");
 
-            if (clinic.ClinicMode == ClinicMode.SoloDoctor)
-                throw new InvalidOperationException("This clinic mode does not include nurse workflow.");
-
-            ClinicVitalPreferencesMapper.ValidateSubmit(request, clinic);
-
             var @case = await _db.PatientCases
-                .Include(pc => pc.Patient)
                 .FirstOrDefaultAsync(pc => pc.Id == caseId && pc.ClinicId == clinicId);
             if (@case == null)
                 throw new KeyNotFoundException("Patient case not found.");
 
-            var vitals = new VitalSigns
-            {
-                ClinicId = clinicId,
-                PatientCaseId = caseId,
-                WeightKg = clinic.EnableVitalWeight ? request.WeightKg : null,
-                SystolicPressure = clinic.EnableVitalBloodPressure ? request.SystolicPressure : null,
-                DiastolicPressure = clinic.EnableVitalBloodPressure ? request.DiastolicPressure : null,
-                TemperatureC = clinic.EnableVitalTemperature ? request.TemperatureC : null,
-                HeartRate = clinic.EnableVitalHeartRate ? request.HeartRate : null,
-                RecordedAt = DateTime.UtcNow
-            };
+            var vitals = clinic.CreateVitalSigns(
+                caseId,
+                request.WeightKg,
+                request.SystolicPressure,
+                request.DiastolicPressure,
+                request.TemperatureC,
+                request.HeartRate);
 
             _db.VitalSigns.Add(vitals);
             await _db.SaveChangesAsync();
@@ -62,7 +49,10 @@ namespace ClinicOps.Application.Services.Patient
             };
         }
 
-        public async Task<(Guid serviceId, string serviceName, decimal servicePrice)> AttachServiceAsync(Guid caseId, Guid clinicId, Guid serviceId)
+        public async Task<(Guid serviceId, string serviceName, decimal servicePrice)> AttachServiceAsync(
+            Guid caseId,
+            Guid clinicId,
+            Guid serviceId)
         {
             var @case = await _db.PatientCases.FirstOrDefaultAsync(pc => pc.Id == caseId && pc.ClinicId == clinicId);
             if (@case == null)
@@ -73,7 +63,7 @@ namespace ClinicOps.Application.Services.Patient
             if (service == null)
                 throw new InvalidOperationException("Service not found, inactive, or not in this clinic.");
 
-            @case.ServiceId = service.Id;
+            @case.AttachService(service.Id);
             await _db.SaveChangesAsync();
 
             return (service.Id, service.Name, service.Price);
@@ -89,11 +79,12 @@ namespace ClinicOps.Application.Services.Patient
             if (clinic == null)
                 throw new KeyNotFoundException("Clinic not found.");
 
-            PatientCaseProtocolHelper.EnsureCanEditProtocol(clinic, user);
+            clinic.EnsureCanEditProtocol(
+                user.IsInRole("ClinicAdmin") || user.IsInRole("SuperAdmin"),
+                user.IsInRole("Nurse"),
+                user.IsInRole("Doctor"));
 
-            var normalized = PatientCaseProtocolHelper.Normalize(protocolNumber);
-            if (string.IsNullOrEmpty(normalized))
-                throw new InvalidOperationException("Numri i protokollit nuk mund të jetë bosh.");
+            var normalized = Domain.Entities.PatientCase.NormalizeProtocolNumber(protocolNumber);
 
             var @case = await _db.PatientCases.FirstOrDefaultAsync(pc => pc.Id == caseId && pc.ClinicId == clinicId);
             if (@case == null)
@@ -108,7 +99,7 @@ namespace ClinicOps.Application.Services.Patient
             if (duplicate)
                 throw new InvalidOperationException("Ky numër protokolli ekziston tashmë për një rast tjetër në klinikë.");
 
-            @case.ProtocolNumber = normalized;
+            @case.SetProtocolNumber(normalized);
             await _db.SaveChangesAsync();
             return normalized;
         }

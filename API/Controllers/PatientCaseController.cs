@@ -2,20 +2,12 @@ using ClinicOps.API.DTOs.LabResult;
 using ClinicOps.API.DTOs.MedicalReport;
 using ClinicOps.API.DTOs.PatientCase;
 using ClinicOps.API.DTOs.Vitals;
-using ClinicOps.API.Hubs;
 using ClinicOps.Application.Services.Common;
-using ClinicOps.Application.Services.Gdpr;
 using ClinicOps.Application.Services.Patient;
-using ClinicOps.Application.Services.Pdf;
-using ClinicOps.Domain.Entities;
+using ClinicOps.Application.Services.Realtime;
 using ClinicOps.Domain.Enums;
-using ClinicOps.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace ClinicOps.API.Controllers
 {
@@ -24,11 +16,9 @@ namespace ClinicOps.API.Controllers
     [Authorize]
     public class PatientCaseController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
-        private readonly IHubContext<ClinicHub> _hubContext;
         private readonly IWebHostEnvironment _env;
-        private readonly IAuditLogService _auditLogService;
         private readonly IClinicContextService _clinicContextService;
+        private readonly IClinicRealtimeNotifier _realtimeNotifier;
         private readonly IPatientCaseReportService _patientCaseReportService;
         private readonly IPatientCaseWorkflowService _patientCaseWorkflowService;
         private readonly IPatientCaseQueryService _patientCaseQueryService;
@@ -37,11 +27,9 @@ namespace ClinicOps.API.Controllers
         private readonly IPatientCasePdfFacadeService _patientCasePdfFacadeService;
 
         public PatientCaseController(
-            ApplicationDbContext db,
-            IHubContext<ClinicHub> hubContext,
             IWebHostEnvironment env,
-            IAuditLogService auditLogService,
             IClinicContextService clinicContextService,
+            IClinicRealtimeNotifier realtimeNotifier,
             IPatientCaseReportService patientCaseReportService,
             IPatientCaseWorkflowService patientCaseWorkflowService,
             IPatientCaseQueryService patientCaseQueryService,
@@ -49,11 +37,9 @@ namespace ClinicOps.API.Controllers
             IPatientCaseLabService patientCaseLabService,
             IPatientCasePdfFacadeService patientCasePdfFacadeService)
         {
-            _db = db;
-            _hubContext = hubContext;
             _env = env;
-            _auditLogService = auditLogService;
             _clinicContextService = clinicContextService;
+            _realtimeNotifier = realtimeNotifier;
             _patientCaseReportService = patientCaseReportService;
             _patientCaseWorkflowService = patientCaseWorkflowService;
             _patientCaseQueryService = patientCaseQueryService;
@@ -62,20 +48,13 @@ namespace ClinicOps.API.Controllers
             _patientCasePdfFacadeService = patientCasePdfFacadeService;
         }
 
-        /// <summary>
-        /// List patient cases for the clinic. Optional status filter (Waiting, InConsultation, Finished).
-        /// </summary>
         [HttpGet]
         [ProducesResponseType(typeof(List<PatientCaseListItemDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<List<PatientCaseListItemDto>>> List([FromQuery] string? status = null)
         {
-            var list = await _patientCaseQueryService.ListAsync(status, User);
-            return Ok(list);
+            return Ok(await _patientCaseQueryService.ListAsync(status, User));
         }
 
-        /// <summary>
-        /// Get patient case by id with latest vitals and medical report (for nurse form / doctor panel).
-        /// </summary>
         [HttpGet("{id:guid}")]
         [ProducesResponseType(typeof(PatientCaseDetailDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -83,8 +62,7 @@ namespace ClinicOps.API.Controllers
         {
             try
             {
-                var dto = await _patientCaseQueryService.GetByIdAsync(id, User);
-                return Ok(dto);
+                return Ok(await _patientCaseQueryService.GetByIdAsync(id, User));
             }
             catch (KeyNotFoundException ex)
             {
@@ -96,9 +74,6 @@ namespace ClinicOps.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Nurse: submit/update vital signs for a patient case. Updates case room via SignalR only.
-        /// </summary>
         [HttpPost("{id:guid}/vitals")]
         [ProducesResponseType(typeof(VitalSignsDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -120,17 +95,10 @@ namespace ClinicOps.API.Controllers
                 return NotFound(ex.Message);
             }
 
-            // Real-time: only case room (nurse on case page). Doctors are notified after status → InConsultation.
-            await _hubContext.Clients
-                .Group("case_" + id)
-                .SendAsync("VitalsUpdated", id, dto);
-
+            await _realtimeNotifier.NotifyVitalsUpdatedAsync(clinicId, id, dto);
             return Ok(dto);
         }
 
-        /// <summary>
-        /// Set or update the unique protocol number for a case (when enabled in clinic preferences).
-        /// </summary>
         [HttpPatch("{id:guid}/protocol")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -158,9 +126,6 @@ namespace ClinicOps.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Doctor: submit or update diagnosis and therapy for a patient case. Broadcasts via SignalR.
-        /// </summary>
         [HttpPost("{id:guid}/report")]
         [Authorize(Roles = "Doctor,ClinicAdmin,SuperAdmin")]
         [ProducesResponseType(typeof(MedicalReportDto), StatusCodes.Status200OK)]
@@ -168,8 +133,7 @@ namespace ClinicOps.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<MedicalReportDto>> SubmitReport(Guid id, [FromBody] SubmitMedicalReportRequest request)
         {
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                ?? User.FindFirst("sub")?.Value;
+            var userId = User.GetUserId();
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
@@ -184,19 +148,10 @@ namespace ClinicOps.API.Controllers
                 return NotFound(ex.Message);
             }
 
-            await _hubContext.Clients
-                .Group(ClinicHub.GroupPrefix + clinicId)
-                .SendAsync("ReportUpdated", id, dto);
-            await _hubContext.Clients
-                .Group("case_" + id)
-                .SendAsync("ReportUpdated", id, dto);
-
+            await _realtimeNotifier.NotifyReportUpdatedAsync(clinicId, id, dto);
             return Ok(dto);
         }
 
-        /// <summary>
-        /// Doctor: read EMR report for a case.
-        /// </summary>
         [HttpGet("{id:guid}/report")]
         [Authorize(Roles = "Doctor,ClinicAdmin,SuperAdmin")]
         [ProducesResponseType(typeof(MedicalReportDto), StatusCodes.Status200OK)]
@@ -204,11 +159,10 @@ namespace ClinicOps.API.Controllers
         public async Task<ActionResult<MedicalReportDto>> GetReport(Guid id)
         {
             var (_, clinicId) = await ResolveClinicIdAsync();
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
+            var userId = User.GetUserId();
             try
             {
-                var dto = await _patientCaseReportService.GetReportAsync(id, clinicId, userId);
-                return Ok(dto);
+                return Ok(await _patientCaseReportService.GetReportAsync(id, clinicId, userId));
             }
             catch (KeyNotFoundException ex)
             {
@@ -216,9 +170,6 @@ namespace ClinicOps.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Doctor: delete EMR report for a case.
-        /// </summary>
         [HttpDelete("{id:guid}/report")]
         [Authorize(Roles = "Doctor,ClinicAdmin,SuperAdmin")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -226,7 +177,7 @@ namespace ClinicOps.API.Controllers
         public async Task<IActionResult> DeleteReport(Guid id)
         {
             var (_, clinicId) = await ResolveClinicIdAsync();
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
+            var userId = User.GetUserId();
             try
             {
                 await _patientCaseReportService.DeleteReportAsync(id, clinicId, userId);
@@ -236,19 +187,10 @@ namespace ClinicOps.API.Controllers
                 return NotFound(ex.Message);
             }
 
-            await _hubContext.Clients
-                .Group(ClinicHub.GroupPrefix + clinicId)
-                .SendAsync("ReportDeleted", id);
-            await _hubContext.Clients
-                .Group("case_" + id)
-                .SendAsync("ReportDeleted", id);
-
+            await _realtimeNotifier.NotifyReportDeletedAsync(clinicId, id);
             return NoContent();
         }
 
-        /// <summary>
-        /// Clinic staff/SuperAdmin: delete a patient case and all cascade children (vitals/report/labs/payment).
-        /// </summary>
         [HttpDelete("{id:guid}")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -271,19 +213,10 @@ namespace ClinicOps.API.Controllers
                 return NotFound(ex.Message);
             }
 
-            await _hubContext.Clients
-                .Group(ClinicHub.GroupPrefix + resolvedClinicId)
-                .SendAsync("CaseDeleted", id);
-            await _hubContext.Clients
-                .Group("case_" + id)
-                .SendAsync("CaseDeleted", id);
-
+            await _realtimeNotifier.NotifyCaseDeletedAsync(resolvedClinicId, id);
             return NoContent();
         }
 
-        /// <summary>
-        /// Update patient case status (Waiting → InConsultation → Finished → Mbyllur).
-        /// </summary>
         [HttpPatch("{id:guid}/status")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -292,20 +225,14 @@ namespace ClinicOps.API.Controllers
             if (!PatientCaseStatusParser.TryParse(status, out var statusEnum))
                 return BadRequest(PatientCaseStatusParser.AllowedStatusesMessage);
 
-            if (statusEnum == PatientCaseStatus.Mbyllur
-                && !User.IsInRole("Nurse")
-                && !User.IsInRole("ClinicAdmin")
-                && !User.IsInRole("SuperAdmin"))
-            {
-                return StatusCode(
-                    StatusCodes.Status403Forbidden,
-                    "Vetëm infermieri ose administratori mund të mbyllë rastin në raporte.");
-            }
-
             var (_, clinicId) = await ResolveClinicIdAsync();
             try
             {
-                statusEnum = await _patientCaseWorkflowService.UpdateStatusAsync(id, statusEnum, clinicId);
+                statusEnum = await _patientCaseWorkflowService.UpdateStatusAsync(id, statusEnum, clinicId, User);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
             }
             catch (KeyNotFoundException ex)
             {
@@ -316,20 +243,10 @@ namespace ClinicOps.API.Controllers
                 return BadRequest(ex.Message);
             }
 
-            await _hubContext.Clients
-                .Group(ClinicHub.GroupPrefix + clinicId)
-                .SendAsync("CaseStatusChanged", id, statusEnum.ToString());
-            await _hubContext.Clients
-                .Group("case_" + id)
-                .SendAsync("CaseStatusChanged", id, statusEnum.ToString());
-
+            await _realtimeNotifier.NotifyCaseStatusChangedAsync(clinicId, id, statusEnum.ToString());
             return Ok(new { id, status = statusEnum.ToString() });
         }
 
-        /// <summary>
-        /// Attach an existing clinic service to this case (doctor selects service; nurse sees name/price on case list).
-        /// Accepts <c>serviceId</c> as query param and/or JSON body <c>{ "serviceId": "guid" }</c>.
-        /// </summary>
         [HttpPatch("{id:guid}/service")]
         [HttpPost("{id:guid}/service")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -342,13 +259,18 @@ namespace ClinicOps.API.Controllers
                 return BadRequest("serviceId is required (query string or JSON body).");
 
             var (_, clinicId) = await ResolveClinicIdAsync();
-            Guid attachedServiceId;
-            string attachedServiceName;
-            decimal attachedServicePrice;
             try
             {
-                (attachedServiceId, attachedServiceName, attachedServicePrice) =
+                var (attachedServiceId, attachedServiceName, attachedServicePrice) =
                     await _patientCaseCommandService.AttachServiceAsync(id, clinicId, resolved.Value);
+
+                return Ok(new
+                {
+                    id,
+                    serviceId = attachedServiceId,
+                    serviceName = attachedServiceName,
+                    servicePrice = attachedServicePrice
+                });
             }
             catch (KeyNotFoundException ex)
             {
@@ -358,20 +280,8 @@ namespace ClinicOps.API.Controllers
             {
                 return BadRequest(ex.Message);
             }
-
-            return Ok(new
-            {
-                id,
-                serviceId = attachedServiceId,
-                serviceName = attachedServiceName,
-                servicePrice = attachedServicePrice
-            });
         }
 
-        /// <summary>
-        /// Generate and download PDF report for the patient case (HTML to PDF via PuppeteerSharp).
-        /// API: GET /api/PatientCase/{id}/pdf  (Authorization: Bearer token)
-        /// </summary>
         [HttpGet("{id:guid}/pdf")]
         [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -379,12 +289,10 @@ namespace ClinicOps.API.Controllers
         {
             var (_, clinicId) = await ResolveClinicIdAsync();
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
-            var fallbackDoctorUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                ?? User.FindFirst("sub")?.Value;
             try
             {
                 var (fileBytes, fileName) = await _patientCasePdfFacadeService
-                    .GenerateCaseReportPdfAsync(id, clinicId, baseUrl, fallbackDoctorUserId);
+                    .GenerateCaseReportPdfAsync(id, clinicId, baseUrl, User.GetUserId());
                 return File(fileBytes, "application/pdf", fileName);
             }
             catch (KeyNotFoundException ex)
@@ -393,19 +301,15 @@ namespace ClinicOps.API.Controllers
             }
         }
 
-        /// <summary>
-        /// List lab result PDFs for a patient case. Any authenticated user with access to the case can list.
-        /// </summary>
         [HttpGet("{id:guid}/labresults")]
         [ProducesResponseType(typeof(List<LabResultDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<List<LabResultDto>>> ListLabResults(Guid id)
         {
             var (_, clinicId) = await ResolveClinicIdAsync();
-            List<LabResultDto> list;
             try
             {
-                list = await _patientCaseLabService.ListLabResultsAsync(id, clinicId);
+                return Ok(await _patientCaseLabService.ListLabResultsAsync(id, clinicId));
             }
             catch (InvalidOperationException ex)
             {
@@ -415,12 +319,8 @@ namespace ClinicOps.API.Controllers
             {
                 return NotFound(ex.Message);
             }
-            return Ok(list);
         }
 
-        /// <summary>
-        /// Upload a lab result PDF for a patient case. Any authenticated user with access to the case can upload.
-        /// </summary>
         [HttpPost("{id:guid}/labresults")]
         [ProducesResponseType(typeof(LabResultDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -435,16 +335,15 @@ namespace ClinicOps.API.Controllers
                 return BadRequest("Only PDF files are allowed for lab results.");
 
             var (_, clinicId) = await ResolveClinicIdAsync();
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            LabResultDto dto;
             try
             {
-                dto = await _patientCaseLabService.UploadLabResultAsync(
+                var dto = await _patientCaseLabService.UploadLabResultAsync(
                     id,
                     clinicId,
-                    userId,
+                    User.GetUserId(),
                     file,
                     _env.ContentRootPath ?? "");
+                return CreatedAtAction(nameof(ListLabResults), new { id }, dto);
             }
             catch (InvalidOperationException ex)
             {
@@ -454,20 +353,14 @@ namespace ClinicOps.API.Controllers
             {
                 return NotFound(ex.Message);
             }
-
-            return CreatedAtAction(nameof(ListLabResults), new { id }, dto);
         }
 
-        /// <summary>
-        /// Download a single lab result PDF file. Authorized if user has access to the patient case.
-        /// </summary>
         [HttpGet("{id:guid}/labresults/{labId:guid}/file")]
         [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DownloadLabResultFile(Guid id, Guid labId)
         {
             var (_, clinicId) = await ResolveClinicIdAsync();
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
             try
             {
                 var (bytes, contentTypeResolved, fileName) =
@@ -476,7 +369,7 @@ namespace ClinicOps.API.Controllers
                         labId,
                         clinicId,
                         _env.ContentRootPath ?? "",
-                        userId);
+                        User.GetUserId());
                 return File(bytes, contentTypeResolved, fileName);
             }
             catch (InvalidOperationException ex)
@@ -493,10 +386,7 @@ namespace ClinicOps.API.Controllers
             }
         }
 
-        private async Task<(bool isSuperAdmin, Guid clinicId)> ResolveClinicIdAsync()
-        {
-            return await _clinicContextService.ResolveClinicIdAsync(User);
-        }
-
+        private Task<(bool isSuperAdmin, Guid clinicId)> ResolveClinicIdAsync() =>
+            _clinicContextService.ResolveClinicIdAsync(User);
     }
 }

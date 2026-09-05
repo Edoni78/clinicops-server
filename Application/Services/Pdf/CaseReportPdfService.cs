@@ -96,6 +96,7 @@ namespace ClinicOps.Application.Services.Pdf
             var reportTime = DateTime.Now.ToString("HH:mm");
             var doctorName = H(m.DoctorDisplayName ?? "—");
             var anamneza = H(m.MedicalReport?.Anamneza ?? "");
+            var ekzaminimi = H(m.MedicalReport?.Ekzaminimi ?? "");
             var diagnosis = H(m.MedicalReport?.Diagnosis ?? "");
             var therapy = H(m.MedicalReport?.Therapy ?? "");
             var logoSrc = BuildImageUrlLikeLogo(
@@ -199,6 +200,7 @@ namespace ClinicOps.Application.Services.Pdf
             sb.Append("<div style='background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:9px 12px; font-size:13px; color:#0f172a; border-radius:12px 12px 0 0;'>Shënime klinike</div>");
             sb.Append("<div style='padding:12px 14px;'>");
             sb.Append("<div style='margin-bottom:12px;'><div style='font-size:12px; color:#64748b; margin-bottom:5px; font-weight:600;'>Anamneza</div><div class='clinical-note-text' style='font-size:12px; color:#0f172a;'>").Append(string.IsNullOrWhiteSpace(anamneza) ? "—" : anamneza).Append("</div></div>");
+            sb.Append("<div style='margin-bottom:12px;'><div style='font-size:12px; color:#64748b; margin-bottom:5px; font-weight:600;'>Ekzaminimi</div><div class='clinical-note-text' style='font-size:12px; color:#0f172a;'>").Append(string.IsNullOrWhiteSpace(ekzaminimi) ? "—" : ekzaminimi).Append("</div></div>");
             sb.Append("<div style='margin-bottom:12px;'><div style='font-size:12px; color:#64748b; margin-bottom:5px; font-weight:600;'>Diagnoza</div><div class='clinical-note-text' style='font-size:12px; color:#0f172a;'>").Append(diagnosis).Append("</div></div>");
             sb.Append("<div><div style='font-size:12px; color:#64748b; margin-bottom:5px; font-weight:600;'>Terapia / Rekomandimi</div><div class='clinical-note-text' style='font-size:12px; color:#0f172a;'>").Append(therapy).Append("</div></div>");
             sb.Append("</div></div>");

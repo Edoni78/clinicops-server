@@ -25,5 +25,46 @@ namespace ClinicOps.Domain.Entities
 
         [MaxLength(2000)]
         public string? Notes { get; set; }
+
+        public static PatientConsent Record(
+            Guid patientId,
+            Guid clinicId,
+            bool hasGivenConsent,
+            string? consentType,
+            string? givenByUserId,
+            string? notes)
+        {
+            return new PatientConsent
+            {
+                PatientId = patientId,
+                ClinicId = clinicId,
+                HasGivenConsent = hasGivenConsent,
+                ConsentType = string.IsNullOrWhiteSpace(consentType) ? "MedicalDataProcessing" : consentType.Trim(),
+                Notes = notes,
+                GivenByUserId = givenByUserId,
+                CreatedAtUtc = DateTime.UtcNow,
+                WithdrawnAtUtc = hasGivenConsent ? null : DateTime.UtcNow
+            };
+        }
+
+        public static PatientConsent Withdraw(
+            Guid patientId,
+            Guid clinicId,
+            string consentType,
+            string? givenByUserId,
+            string? notes)
+        {
+            return new PatientConsent
+            {
+                PatientId = patientId,
+                ClinicId = clinicId,
+                HasGivenConsent = false,
+                ConsentType = string.IsNullOrWhiteSpace(consentType) ? "MedicalDataProcessing" : consentType,
+                CreatedAtUtc = DateTime.UtcNow,
+                WithdrawnAtUtc = DateTime.UtcNow,
+                GivenByUserId = givenByUserId,
+                Notes = notes
+            };
+        }
     }
 }

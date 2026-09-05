@@ -5,6 +5,7 @@ namespace ClinicOps.API.DTOs.MedicalReport
         public Guid Id { get; set; }
         public Guid PatientCaseId { get; set; }
         public string? Anamneza { get; set; }
+        public string? Ekzaminimi { get; set; }
         public string Diagnosis { get; set; } = null!;
         public string Therapy { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
@@ -14,6 +15,7 @@ namespace ClinicOps.API.DTOs.MedicalReport
     public class SubmitMedicalReportRequest
     {
         public string? Anamneza { get; set; }
+        public string? Ekzaminimi { get; set; }
         public string Diagnosis { get; set; } = null!;
         public string Therapy { get; set; } = null!;
     }

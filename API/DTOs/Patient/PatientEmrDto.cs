@@ -24,6 +24,7 @@ namespace ClinicOps.API.DTOs.Patient
         public string? DoctorUserId { get; set; }
         public string? DoctorName { get; set; }
         public string? Anamneza { get; set; }
+        public string? Ekzaminimi { get; set; }
         public string? Diagnosis { get; set; }
         public string? Therapy { get; set; }
         public DateTime? ReportCreatedAt { get; set; }

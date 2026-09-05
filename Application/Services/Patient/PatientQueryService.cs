@@ -1,6 +1,6 @@
 using ClinicOps.API.DTOs.Patient;
-using ClinicOps.Application.Services.Gdpr;
-using ClinicOps.Domain.Entities;
+using ClinicOps.Application.Services.Common;
+using ClinicOps.Application.Services.Audit;
 using ClinicOps.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -11,11 +11,16 @@ namespace ClinicOps.Application.Services.Patient
     {
         private readonly ApplicationDbContext _db;
         private readonly IAuditLogService _auditLogService;
+        private readonly IClinicContextService _clinicContextService;
 
-        public PatientQueryService(ApplicationDbContext db, IAuditLogService auditLogService)
+        public PatientQueryService(
+            ApplicationDbContext db,
+            IAuditLogService auditLogService,
+            IClinicContextService clinicContextService)
         {
             _db = db;
             _auditLogService = auditLogService;
+            _clinicContextService = clinicContextService;
         }
 
         public async Task<List<PatientResponseDto>> GetAllPatientsAsync(Guid? clinicId, ClaimsPrincipal user)
@@ -156,6 +161,7 @@ namespace ClinicOps.Application.Services.Patient
                     DoctorUserId = effectiveDoctorView ? doctorUserId : null,
                     DoctorName = doctorName,
                     Anamneza = effectiveDoctorView ? report?.Anamneza : null,
+                    Ekzaminimi = effectiveDoctorView ? report?.Ekzaminimi : null,
                     Diagnosis = report?.Diagnosis,
                     Therapy = report?.Therapy,
                     ReportCreatedAt = report?.CreatedAt,
@@ -203,38 +209,14 @@ namespace ClinicOps.Application.Services.Patient
             if (patient == null)
                 throw new KeyNotFoundException("Patient not found.");
 
-            patient.IsActive = false;
+            patient.Deactivate();
             await _db.SaveChangesAsync();
 
-            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst("sub")?.Value;
+            var userId = user.GetUserId();
             await _auditLogService.TryLogAsync("PatientDeleted", "Patient", patient.Id.ToString(), patient.ClinicId, userId);
         }
 
-        private async Task<(bool isSuperAdmin, Guid clinicId)> ResolveClinicIdAsync(ClaimsPrincipal user)
-        {
-            var clinicIdClaim = user.FindFirst("clinicId")?.Value;
-            if (!string.IsNullOrEmpty(clinicIdClaim) && Guid.TryParse(clinicIdClaim, out var fromToken))
-                return (false, fromToken);
-
-            var defaultId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-            var clinic = await _db.Clinics.FindAsync(defaultId);
-            if (clinic == null)
-            {
-                clinic = new Clinic
-                {
-                    Id = defaultId,
-                    Name = "Default Test Clinic",
-                    Address = "123 Test Street",
-                    Phone = "+1234567890",
-                    ClinicMode = Domain.Enums.ClinicMode.FullTeam,
-                    CreatedAt = DateTime.UtcNow,
-                    IsActive = true
-                };
-                _db.Clinics.Add(clinic);
-                await _db.SaveChangesAsync();
-            }
-
-            return (true, defaultId);
-        }
+        private Task<(bool isSuperAdmin, Guid clinicId)> ResolveClinicIdAsync(ClaimsPrincipal user) =>
+            _clinicContextService.ResolveClinicIdAsync(user);
     }
 }

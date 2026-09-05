@@ -1,5 +1,5 @@
 using ClinicOps.API.DTOs.Auth;
-using ClinicOps.Application.Services.Gdpr;
+using ClinicOps.Application.Services.Audit;
 using ClinicOps.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;

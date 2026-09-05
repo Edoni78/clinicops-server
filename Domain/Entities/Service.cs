@@ -22,5 +22,18 @@ namespace ClinicOps.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public bool IsActive { get; set; } = true;
+
+        public void Deactivate()
+        {
+            IsActive = false;
+        }
+
+        public void UpdateDetails(string? name, decimal? price)
+        {
+            if (name != null)
+                Name = name.Trim();
+            if (price.HasValue)
+                Price = price.Value;
+        }
     }
 }

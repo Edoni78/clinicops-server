@@ -1,9 +1,7 @@
 using ClinicOps.API.DTOs.Clinic;
-using ClinicOps.Application.Services.ClinicSettings;
-using ClinicOps.Infrastructure.Data;
+using ClinicOps.Application.Services.ClinicProfile;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace ClinicOps.API.Controllers
 {
@@ -12,13 +10,11 @@ namespace ClinicOps.API.Controllers
     [Authorize]
     public class ClinicController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
-        private readonly IWebHostEnvironment _env;
+        private readonly IClinicProfileService _clinicProfileService;
 
-        public ClinicController(ApplicationDbContext db, IWebHostEnvironment env)
+        public ClinicController(IClinicProfileService clinicProfileService)
         {
-            _db = db;
-            _env = env;
+            _clinicProfileService = clinicProfileService;
         }
 
         /// <summary>
@@ -31,15 +27,18 @@ namespace ClinicOps.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ClinicProfileDto>> GetProfile()
         {
-            var clinicId = GetClinicIdFromToken();
-            if (!clinicId.HasValue)
-                return BadRequest("Only clinic users can access clinic profile. Login with a clinic account.");
-
-            var clinic = await _db.Clinics.AsNoTracking().FirstOrDefaultAsync(c => c.Id == clinicId.Value);
-            if (clinic == null)
-                return NotFound("Clinic not found.");
-
-            return Ok(MapProfile(clinic));
+            try
+            {
+                return Ok(await _clinicProfileService.GetProfileAsync(User));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
         /// <summary>
@@ -52,26 +51,18 @@ namespace ClinicOps.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ClinicProfileDto>> UpdateProfile([FromBody] UpdateClinicProfileRequest request)
         {
-            var clinicId = GetClinicIdFromToken();
-            if (!clinicId.HasValue)
-                return BadRequest("Only clinic users can update clinic profile.");
-
-            var clinic = await _db.Clinics.FirstOrDefaultAsync(c => c.Id == clinicId.Value);
-            if (clinic == null)
-                return NotFound("Clinic not found.");
-
-            if (request.Name != null) clinic.Name = request.Name;
-            if (request.Address != null) clinic.Address = request.Address;
-            if (request.Phone != null) clinic.Phone = request.Phone;
-            if (request.LogoUrl != null) clinic.LogoUrl = request.LogoUrl;
-            if (request.Description != null) clinic.Description = request.Description;
-            ClinicPreferencesMapper.ApplyVital(request.VitalPreferences, clinic);
-            ClinicPreferencesMapper.ApplyProtocol(request.ProtocolPreferences, clinic);
-            ClinicPreferencesMapper.ApplyColorTheme(request.ColorThemePreferences, clinic);
-
-            await _db.SaveChangesAsync();
-
-            return Ok(MapProfile(clinic));
+            try
+            {
+                return Ok(await _clinicProfileService.UpdateProfileAsync(request, User));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
         /// <summary>
@@ -81,58 +72,20 @@ namespace ClinicOps.API.Controllers
         [ProducesResponseType(typeof(ClinicProfileDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ClinicProfileDto>> UploadLogo(IFormFile? file)
+        public async Task<ActionResult<ClinicProfileDto>> UploadLogo(IFormFile? file, CancellationToken cancellationToken)
         {
-            var clinicId = GetClinicIdFromToken();
-            if (!clinicId.HasValue)
-                return BadRequest("Only clinic users can upload clinic logo.");
-
-            var clinic = await _db.Clinics.FirstOrDefaultAsync(c => c.Id == clinicId.Value);
-            if (clinic == null)
-                return NotFound("Clinic not found.");
-
-            if (file == null || file.Length == 0)
-                return BadRequest("No file provided.");
-
-            var allowed = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
-            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-            if (string.IsNullOrEmpty(ext) || !allowed.Contains(ext))
-                return BadRequest("Allowed formats: " + string.Join(", ", allowed));
-
-            var uploadsDir = Path.Combine(_env.WebRootPath ?? _env.ContentRootPath, "uploads", "clinics", clinicId.Value.ToString());
-            Directory.CreateDirectory(uploadsDir);
-            var fileName = "logo" + ext;
-            var filePath = Path.Combine(uploadsDir, fileName);
-            await using (var stream = new FileStream(filePath, FileMode.Create))
-                await file.CopyToAsync(stream);
-
-            var logoUrl = $"/uploads/clinics/{clinicId.Value}/{fileName}";
-            clinic.LogoUrl = logoUrl;
-            await _db.SaveChangesAsync();
-
-            return Ok(MapProfile(clinic));
-        }
-
-        private static ClinicProfileDto MapProfile(ClinicOps.Domain.Entities.Clinic clinic) => new()
-        {
-            Id = clinic.Id,
-            Name = clinic.Name,
-            Address = clinic.Address,
-            Phone = clinic.Phone,
-            LogoUrl = clinic.LogoUrl,
-            Description = clinic.Description,
-            ClinicMode = clinic.ClinicMode,
-            CreatedAt = clinic.CreatedAt,
-            IsActive = clinic.IsActive,
-            VitalPreferences = ClinicPreferencesMapper.ToVitalDto(clinic),
-            ProtocolPreferences = ClinicPreferencesMapper.ToProtocolDto(clinic),
-            ColorThemePreferences = ClinicPreferencesMapper.ToColorThemeDto(clinic),
-        };
-
-        private Guid? GetClinicIdFromToken()
-        {
-            var claim = User.FindFirst("clinicId")?.Value;
-            return Guid.TryParse(claim, out var id) ? id : null;
+            try
+            {
+                return Ok(await _clinicProfileService.UploadLogoAsync(file, User, cancellationToken));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
     }
 }

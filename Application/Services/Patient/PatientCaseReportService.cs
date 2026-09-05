@@ -1,5 +1,5 @@
 using ClinicOps.API.DTOs.MedicalReport;
-using ClinicOps.Application.Services.Gdpr;
+using ClinicOps.Application.Services.Audit;
 using ClinicOps.Domain.Entities;
 using ClinicOps.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -29,24 +29,24 @@ namespace ClinicOps.Application.Services.Patient
             MedicalReport report;
             if (existing != null)
             {
-                existing.Anamneza = request.Anamneza;
-                existing.Diagnosis = request.Diagnosis;
-                existing.Therapy = request.Therapy;
-                existing.DoctorUserId = userId;
+                existing.ApplyContent(
+                    request.Anamneza,
+                    request.Ekzaminimi,
+                    request.Diagnosis,
+                    request.Therapy,
+                    userId);
                 report = existing;
             }
             else
             {
-                report = new MedicalReport
-                {
-                    ClinicId = clinicId,
-                    PatientCaseId = caseId,
-                    Anamneza = request.Anamneza,
-                    Diagnosis = request.Diagnosis,
-                    Therapy = request.Therapy,
-                    DoctorId = Guid.Empty,
-                    DoctorUserId = userId
-                };
+                report = MedicalReport.Create(
+                    clinicId,
+                    caseId,
+                    request.Anamneza,
+                    request.Ekzaminimi,
+                    request.Diagnosis,
+                    request.Therapy,
+                    userId);
                 _db.MedicalReports.Add(report);
             }
 
@@ -58,6 +58,7 @@ namespace ClinicOps.Application.Services.Patient
                 Id = report.Id,
                 PatientCaseId = caseId,
                 Anamneza = report.Anamneza,
+                Ekzaminimi = report.Ekzaminimi,
                 Diagnosis = report.Diagnosis,
                 Therapy = report.Therapy,
                 CreatedAt = report.CreatedAt,
@@ -86,6 +87,7 @@ namespace ClinicOps.Application.Services.Patient
                 Id = report.Id,
                 PatientCaseId = report.PatientCaseId,
                 Anamneza = report.Anamneza,
+                Ekzaminimi = report.Ekzaminimi,
                 Diagnosis = report.Diagnosis,
                 Therapy = report.Therapy,
                 CreatedAt = report.CreatedAt,

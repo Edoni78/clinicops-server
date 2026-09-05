@@ -99,6 +99,7 @@ namespace ClinicOps.Application.Services.Patient
                 MedicalReport = report == null ? null : new MedicalReportModel
                 {
                     Anamneza = report.Anamneza,
+                    Ekzaminimi = report.Ekzaminimi,
                     Diagnosis = report.Diagnosis,
                     Therapy = report.Therapy,
                     CreatedAt = report.CreatedAt

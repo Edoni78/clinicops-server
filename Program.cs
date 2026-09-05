@@ -4,18 +4,22 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
 using ClinicOps.Application.Services.Auth;
+using ClinicOps.Application.Services.ClinicApplications;
+using ClinicOps.Application.Services.ClinicCatalog;
+using ClinicOps.Application.Services.ClinicProfile;
+using ClinicOps.Application.Services.ClinicUsers;
 using ClinicOps.Application.Services.Common;
-using ClinicOps.Application.Services.Gdpr;
+using ClinicOps.Application.Services.DoctorProfile;
+using ClinicOps.Application.Services.Audit;
 using ClinicOps.Application.Services.Patient;
+using ClinicOps.Application.Services.Privacy;
 using ClinicOps.Application.Services.Pdf;
+using ClinicOps.Application.Services.PatientMigrations;
+using ClinicOps.Application.Services.Realtime;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// =======================
-// Services
-// =======================
 
 builder.Services.AddControllers();
 
@@ -32,8 +36,19 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IAuthLoginService, AuthLoginService>();
 builder.Services.AddScoped<IAuthMfaService, AuthMfaService>();
+builder.Services.AddScoped<IClinicRegistrationService, ClinicRegistrationService>();
 builder.Services.AddScoped<IClinicContextService, ClinicContextService>();
+builder.Services.AddScoped<IProfileImageStorage, ProfileImageStorage>();
+builder.Services.AddScoped<IClinicServiceCatalogService, ClinicServiceCatalogService>();
+builder.Services.AddScoped<IClinicUserService, ClinicUserService>();
+builder.Services.AddScoped<IClinicProfileService, ClinicProfileService>();
+builder.Services.AddScoped<IDoctorProfileService, DoctorProfileService>();
+builder.Services.AddScoped<IClinicApplicationService, ClinicApplicationService>();
+builder.Services.AddScoped<IClinicRealtimeNotifier, ClinicRealtimeNotifier>();
 builder.Services.AddScoped<IPatientService, PatientService>();
+builder.Services.AddScoped<IPatientExcelParser, PatientExcelParser>();
+builder.Services.AddScoped<IPatientMigrationFileStore, PatientMigrationFileStore>();
+builder.Services.AddScoped<IPatientMigrationService, PatientMigrationService>();
 builder.Services.AddScoped<IPatientQueryService, PatientQueryService>();
 builder.Services.AddScoped<IPatientCaseReportService, PatientCaseReportService>();
 builder.Services.AddScoped<IPatientCaseWorkflowService, PatientCaseWorkflowService>();
@@ -43,7 +58,7 @@ builder.Services.AddScoped<IPatientCaseLabService, PatientCaseLabService>();
 builder.Services.AddScoped<IPatientCasePdfFacadeService, PatientCasePdfFacadeService>();
 builder.Services.AddScoped<ICaseReportPdfService, CaseReportPdfService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
-builder.Services.AddScoped<IPatientGdprService, PatientGdprService>();
+builder.Services.AddScoped<IPatientPrivacyService, PatientPrivacyService>();
 builder.Services.AddScoped<IAuditLogQueryService, AuditLogQueryService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
@@ -74,8 +89,7 @@ builder.Services.AddAuthentication(options =>
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromSeconds(30)
         };
-        
-        // Prevent redirects for API calls
+
         options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
         {
             OnChallenge = context =>
@@ -85,7 +99,6 @@ builder.Services.AddAuthentication(options =>
                 context.Response.ContentType = "application/json";
                 return Task.CompletedTask;
             },
-            // SignalR: read JWT from query string (e.g. ?access_token=...)
             OnMessageReceived = context =>
             {
                 var path = context.HttpContext.Request.Path;
@@ -101,12 +114,8 @@ builder.Services.AddAuthentication(options =>
         };
     });
 
-
-
 builder.Services.AddSignalR();
-
 builder.Services.AddAuthorization();
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -124,10 +133,6 @@ builder.Services.AddCors(options =>
             .AllowCredentials();
     });
 });
-
-// =======================
-// App
-// =======================
 
 var app = builder.Build();
 

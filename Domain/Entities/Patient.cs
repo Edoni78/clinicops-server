@@ -16,7 +16,6 @@ namespace ClinicOps.Domain.Entities
         [Required]
         [MaxLength(100)]
         public string LastName { get; set; } = null!;
-        
 
         public DateTime DateOfBirth { get; set; }
 
@@ -29,5 +28,18 @@ namespace ClinicOps.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public bool IsActive { get; set; } = true;
+
+        public void Deactivate()
+        {
+            IsActive = false;
+        }
+
+        public void AnonymizeIdentifiers()
+        {
+            FirstName = "Anonymized";
+            LastName = "Patient";
+            Phone = null;
+            Gender = null;
+        }
     }
 }

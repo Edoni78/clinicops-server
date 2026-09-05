@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("clinicops")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+55630131c59eae012c371def370236f5c013127d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d94a2b2533a927a1f3c812793079e62cba85b0c0")]
 [assembly: System.Reflection.AssemblyProductAttribute("clinicops")]
 [assembly: System.Reflection.AssemblyTitleAttribute("clinicops")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

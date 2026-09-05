@@ -1,7 +1,6 @@
 using ClinicOps.API.DTOs.LabResult;
-using ClinicOps.Application.Services.Gdpr;
+using ClinicOps.Application.Services.Audit;
 using ClinicOps.Domain.Entities;
-using ClinicOps.Domain.Enums;
 using ClinicOps.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -111,12 +110,11 @@ namespace ClinicOps.Application.Services.Patient
 
         private async Task EnsureLabWorkflowModeAsync(Guid clinicId)
         {
-            var mode = await _db.Clinics
-                .Where(c => c.Id == clinicId)
-                .Select(c => c.ClinicMode)
-                .FirstOrDefaultAsync();
-            if (mode == ClinicMode.SoloDoctor)
-                throw new InvalidOperationException("This clinic mode does not include laboratory workflow.");
+            var clinic = await _db.Clinics.AsNoTracking().FirstOrDefaultAsync(c => c.Id == clinicId);
+            if (clinic == null)
+                throw new KeyNotFoundException("Clinic not found.");
+
+            clinic.EnsureLabWorkflowEnabled();
         }
     }
 }
