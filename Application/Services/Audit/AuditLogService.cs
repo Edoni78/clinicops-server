@@ -112,6 +112,7 @@ namespace ClinicOps.Application.Services.Audit
                 "PatientExported" => "Security",
                 "FailedLogin" => "Warning",
                 "PatientMigrationFailed" => "Warning",
+                "PatientCaseMigrationFailed" => "Warning",
                 "PatientMigrationCompleted" => "Info",
                 _ => "Info"
             };
@@ -132,6 +133,11 @@ namespace ClinicOps.Application.Services.Audit
                 "PatientMigrationStarted" => "A patient import was started.",
                 "PatientMigrationCompleted" => "A patient import was completed.",
                 "PatientMigrationFailed" => "A patient import failed.",
+                "PatientCaseMigrationUploaded" => "A case Excel file was uploaded for import.",
+                "PatientCaseMigrationPreviewed" => "A case import was previewed.",
+                "PatientCaseMigrationStarted" => "A case import was started.",
+                "PatientCaseMigrationCompleted" => "A case import was completed.",
+                "PatientCaseMigrationFailed" => "A case import failed.",
                 "MedicalRecordUpdated" => "A medical record was updated.",
                 "MedicalRecordViewed" => "Sensitive medical data was viewed.",
                 _ => $"{action} on {entityName}{(string.IsNullOrWhiteSpace(entityId) ? string.Empty : $" ({entityId})")}."

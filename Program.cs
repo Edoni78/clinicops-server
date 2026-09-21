@@ -49,6 +49,7 @@ builder.Services.AddScoped<IPatientService, PatientService>();
 builder.Services.AddScoped<IPatientExcelParser, PatientExcelParser>();
 builder.Services.AddScoped<IPatientMigrationFileStore, PatientMigrationFileStore>();
 builder.Services.AddScoped<IPatientMigrationService, PatientMigrationService>();
+builder.Services.AddScoped<IPatientCaseMigrationService, PatientCaseMigrationService>();
 builder.Services.AddScoped<IPatientQueryService, PatientQueryService>();
 builder.Services.AddScoped<IPatientCaseReportService, PatientCaseReportService>();
 builder.Services.AddScoped<IPatientCaseWorkflowService, PatientCaseWorkflowService>();

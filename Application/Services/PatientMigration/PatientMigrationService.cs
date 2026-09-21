@@ -258,7 +258,7 @@ namespace ClinicOps.Application.Services.PatientMigrations
             if (pageSize < 1) pageSize = 25;
             if (pageSize > 100) pageSize = 100;
 
-            var rows = await _fileStore.LoadPreviewRowsAsync(clinicId, migration.Id, cancellationToken);
+            var rows = await _fileStore.LoadPreviewRowsAsync<PatientMigrationPreviewRowDto>(clinicId, migration.Id, cancellationToken);
             var filtered = FilterRows(rows, status);
             var total = filtered.Count;
             var items = filtered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
@@ -294,7 +294,7 @@ namespace ClinicOps.Application.Services.PatientMigrations
             if (migration.Status is not PatientMigrationStatus.Previewed and not PatientMigrationStatus.Failed)
                 throw new InvalidOperationException("Please preview the import before confirming.");
 
-            var previewRows = await _fileStore.LoadPreviewRowsAsync(clinicId, migration.Id, cancellationToken);
+            var previewRows = await _fileStore.LoadPreviewRowsAsync<PatientMigrationPreviewRowDto>(clinicId, migration.Id, cancellationToken);
             var validRows = previewRows.Where(r =>
                     string.Equals(r.Status, "Valid", StringComparison.OrdinalIgnoreCase)
                     && !string.IsNullOrWhiteSpace(r.FirstName)

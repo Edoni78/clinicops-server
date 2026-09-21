@@ -1,4 +1,3 @@
-using ClinicOps.API.DTOs.PatientMigration;
 using System.Text.Json;
 
 namespace ClinicOps.Application.Services.PatientMigrations
@@ -8,8 +7,8 @@ namespace ClinicOps.Application.Services.PatientMigrations
         string GetExcelPath(Guid clinicId, Guid migrationId);
         string GetPreviewPath(Guid clinicId, Guid migrationId);
         Task SaveExcelAsync(Guid clinicId, Guid migrationId, Stream content, CancellationToken cancellationToken);
-        Task<List<PatientMigrationPreviewRowDto>> LoadPreviewRowsAsync(Guid clinicId, Guid migrationId, CancellationToken cancellationToken);
-        Task SavePreviewRowsAsync(Guid clinicId, Guid migrationId, IReadOnlyList<PatientMigrationPreviewRowDto> rows, CancellationToken cancellationToken);
+        Task<List<T>> LoadPreviewRowsAsync<T>(Guid clinicId, Guid migrationId, CancellationToken cancellationToken);
+        Task SavePreviewRowsAsync<T>(Guid clinicId, Guid migrationId, IReadOnlyList<T> rows, CancellationToken cancellationToken);
         void DeleteExcel(Guid clinicId, Guid migrationId);
         void DeleteSessionFiles(Guid clinicId, Guid migrationId);
         void DeleteExpiredFiles(TimeSpan maxAge);
@@ -38,7 +37,7 @@ namespace ClinicOps.Application.Services.PatientMigrations
             await content.CopyToAsync(file, cancellationToken);
         }
 
-        public async Task<List<PatientMigrationPreviewRowDto>> LoadPreviewRowsAsync(
+        public async Task<List<T>> LoadPreviewRowsAsync<T>(
             Guid clinicId,
             Guid migrationId,
             CancellationToken cancellationToken)
@@ -48,17 +47,17 @@ namespace ClinicOps.Application.Services.PatientMigrations
                 throw new InvalidOperationException("Preview data was not found. Please run preview again.");
 
             await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var rows = await JsonSerializer.DeserializeAsync<List<PatientMigrationPreviewRowDto>>(
+            var rows = await JsonSerializer.DeserializeAsync<List<T>>(
                 stream,
                 JsonOptions(),
                 cancellationToken);
-            return rows ?? new List<PatientMigrationPreviewRowDto>();
+            return rows ?? new List<T>();
         }
 
-        public async Task SavePreviewRowsAsync(
+        public async Task SavePreviewRowsAsync<T>(
             Guid clinicId,
             Guid migrationId,
-            IReadOnlyList<PatientMigrationPreviewRowDto> rows,
+            IReadOnlyList<T> rows,
             CancellationToken cancellationToken)
         {
             var path = GetPreviewPath(clinicId, migrationId);

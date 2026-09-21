@@ -60,39 +60,67 @@ namespace ClinicOps.Application.Services.PatientMigrations
             return text.Length == 0 ? null : text;
         }
 
-        public static bool TryParseDateOfBirth(object? raw, out DateTime date, out string? error)
+        public static bool TryParseDateOfBirth(object? raw, out DateTime date, out string? error) =>
+            TryParseCalendarDate(raw, "Date of birth", required: true, out date, out error);
+
+        public static bool TryParseOptionalCalendarDate(object? raw, string fieldLabel, out DateTime? date, out string? error)
+        {
+            date = null;
+            error = null;
+            if (raw == null)
+                return true;
+
+            var text = NormalizeText(raw);
+            if (text == null && raw is not DateTime && raw is not DateTimeOffset && raw is not double && raw is not float && raw is not decimal && raw is not int)
+                return true;
+
+            if (raw is string && text == null)
+                return true;
+
+            if (!TryParseCalendarDate(raw, fieldLabel, required: false, out var parsed, out error))
+                return false;
+
+            date = parsed;
+            return true;
+        }
+
+        public static bool TryParseCalendarDate(object? raw, string fieldLabel, bool required, out DateTime date, out string? error)
         {
             date = default;
             error = null;
 
             if (raw == null)
             {
-                error = "Date of birth is required.";
+                if (!required)
+                    return true;
+                error = $"{fieldLabel} is required.";
                 return false;
             }
 
             if (raw is DateTime dt)
-                return ValidateDate(dt, out date, out error);
+                return ValidateDate(dt, fieldLabel, out date, out error);
 
             if (raw is DateTimeOffset dto)
-                return ValidateDate(dto.Date, out date, out error);
+                return ValidateDate(dto.Date, fieldLabel, out date, out error);
 
             if (raw is double oaDouble)
-                return TryParseNumericDate(oaDouble, out date, out error);
+                return TryParseNumericDate(oaDouble, fieldLabel, out date, out error);
 
             if (raw is float oaFloat)
-                return TryParseNumericDate(oaFloat, out date, out error);
+                return TryParseNumericDate(oaFloat, fieldLabel, out date, out error);
 
             if (raw is decimal oaDecimal)
-                return TryParseNumericDate((double)oaDecimal, out date, out error);
+                return TryParseNumericDate((double)oaDecimal, fieldLabel, out date, out error);
 
             if (raw is int oaInt)
-                return TryParseNumericDate(oaInt, out date, out error);
+                return TryParseNumericDate(oaInt, fieldLabel, out date, out error);
 
             var text = NormalizeText(raw);
             if (string.IsNullOrEmpty(text))
             {
-                error = "Date of birth is required.";
+                if (!required)
+                    return true;
+                error = $"{fieldLabel} is required.";
                 return false;
             }
 
@@ -128,17 +156,16 @@ namespace ClinicOps.Application.Services.PatientMigrations
                     DateTimeStyles.None,
                     out parsed))
             {
-                return ValidateDate(parsed, out date, out error);
+                return ValidateDate(parsed, fieldLabel, out date, out error);
             }
 
-            // Last resort: prefer day-first for ambiguous values (Albanian/EU clinics).
             if (DateTime.TryParse(text, new CultureInfo("sq-AL"), DateTimeStyles.None, out parsed)
                 || DateTime.TryParse(text, CultureInfo.GetCultureInfo("en-GB"), DateTimeStyles.None, out parsed))
             {
-                return ValidateDate(parsed, out date, out error);
+                return ValidateDate(parsed, fieldLabel, out date, out error);
             }
 
-            error = $"Invalid date of birth: \"{Truncate(text, 40)}\".";
+            error = $"Invalid {fieldLabel.ToLowerInvariant()}: \"{Truncate(text, 40)}\".";
             return false;
         }
 
@@ -328,44 +355,43 @@ namespace ClinicOps.Application.Services.PatientMigrations
             + "|"
             + dateOfBirth.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-        private static bool TryParseNumericDate(double value, out DateTime date, out string? error)
+        private static bool TryParseNumericDate(double value, string fieldLabel, out DateTime date, out string? error)
         {
             date = default;
             error = null;
 
-            // Excel serial dates for people alive today are roughly 1..60000.
             if (value is > 1 and < 80000)
             {
                 try
                 {
                     var oa = DateTime.FromOADate(value);
-                    return ValidateDate(oa, out date, out error);
+                    return ValidateDate(oa, fieldLabel, out date, out error);
                 }
                 catch (ArgumentException)
                 {
-                    error = $"Invalid date of birth: \"{value}\".";
+                    error = $"Invalid {fieldLabel.ToLowerInvariant()}: \"{value}\".";
                     return false;
                 }
             }
 
-            error = $"Invalid date of birth: \"{value}\".";
+            error = $"Invalid {fieldLabel.ToLowerInvariant()}: \"{value}\".";
             return false;
         }
 
-        private static bool ValidateDate(DateTime value, out DateTime date, out string? error)
+        private static bool ValidateDate(DateTime value, string fieldLabel, out DateTime date, out string? error)
         {
             date = value.Date;
             error = null;
 
             if (date > DateTime.UtcNow.Date)
             {
-                error = "Date of birth cannot be in the future.";
+                error = $"{fieldLabel} cannot be in the future.";
                 return false;
             }
 
             if (date < MinDateOfBirth)
             {
-                error = "Date of birth is too far in the past.";
+                error = $"{fieldLabel} is too far in the past.";
                 return false;
             }
 
