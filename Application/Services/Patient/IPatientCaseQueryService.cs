@@ -7,5 +7,6 @@ namespace ClinicOps.Application.Services.Patient
     {
         Task<List<PatientCaseListItemDto>> ListAsync(string? status, ClaimsPrincipal user);
         Task<PatientCaseDetailDto> GetByIdAsync(Guid caseId, ClaimsPrincipal user);
+        Task EnsureCurrentDoctorMayAccessAsync(Guid caseId, ClaimsPrincipal user);
     }
 }

@@ -141,7 +141,12 @@ namespace ClinicOps.API.Controllers
             MedicalReportDto dto;
             try
             {
+                await _patientCaseQueryService.EnsureCurrentDoctorMayAccessAsync(id, User);
                 dto = await _patientCaseReportService.SubmitReportAsync(id, clinicId, userId, request);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
             }
             catch (KeyNotFoundException ex)
             {
@@ -162,7 +167,12 @@ namespace ClinicOps.API.Controllers
             var userId = User.GetUserId();
             try
             {
+                await _patientCaseQueryService.EnsureCurrentDoctorMayAccessAsync(id, User);
                 return Ok(await _patientCaseReportService.GetReportAsync(id, clinicId, userId));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
             }
             catch (KeyNotFoundException ex)
             {
@@ -180,7 +190,12 @@ namespace ClinicOps.API.Controllers
             var userId = User.GetUserId();
             try
             {
+                await _patientCaseQueryService.EnsureCurrentDoctorMayAccessAsync(id, User);
                 await _patientCaseReportService.DeleteReportAsync(id, clinicId, userId);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
             }
             catch (KeyNotFoundException ex)
             {
@@ -291,9 +306,14 @@ namespace ClinicOps.API.Controllers
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
             try
             {
+                await _patientCaseQueryService.EnsureCurrentDoctorMayAccessAsync(id, User);
                 var (fileBytes, fileName) = await _patientCasePdfFacadeService
                     .GenerateCaseReportPdfAsync(id, clinicId, baseUrl, User.GetUserId());
                 return File(fileBytes, "application/pdf", fileName);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
             }
             catch (KeyNotFoundException ex)
             {

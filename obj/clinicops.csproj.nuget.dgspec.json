@@ -10,7 +10,7 @@
         "projectUniqueName": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\clinicops.csproj",
         "projectName": "clinicops",
         "projectPath": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\clinicops.csproj",
-        "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
+        "packagesPath": "C:\\Users\\Admin\\AppData\\Local\\Temp\\cursor-sandbox-cache\\fb068d2862a02352500c5c0d3d4858fc\\nuget",
         "outputPath": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
@@ -43,7 +43,8 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
         "net8.0": {
@@ -113,7 +114,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.416/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.101/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

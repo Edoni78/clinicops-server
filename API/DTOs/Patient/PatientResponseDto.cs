@@ -15,5 +15,13 @@ namespace ClinicOps.API.DTOs.Patient
         public string? PatientCaseStatus { get; set; }
         public string? AssignedDoctorUserId { get; set; }
         public string? AssignedDoctorName { get; set; }
+        public List<PatientDoctorDto> Doctors { get; set; } = new();
+        public string? DoctorNames { get; set; }
+    }
+
+    public class PatientDoctorDto
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
     }
 }

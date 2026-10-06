@@ -131,9 +131,9 @@ namespace ClinicOps.API.Controllers
             {
                 return Ok(await _patientQueryService.GetPatientEmrAsync(id, doctorView, User));
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException ex)
             {
-                return Forbid();
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
             }
             catch (KeyNotFoundException ex)
             {

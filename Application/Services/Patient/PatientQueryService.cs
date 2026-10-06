@@ -52,15 +52,40 @@ namespace ClinicOps.Application.Services.Patient
                 .ToListAsync();
 
             var patientIds = patients.Select(p => p.Id).ToList();
-            var latestCases = await _db.PatientCases
+            var caseRows = await _db.PatientCases
+                .AsNoTracking()
                 .Where(pc => patientIds.Contains(pc.PatientId))
-                .GroupBy(pc => pc.PatientId)
-                .Select(g => g.OrderByDescending(pc => pc.CreatedAt).First())
+                .OrderByDescending(pc => pc.CreatedAt)
+                .Select(pc => new
+                {
+                    pc.PatientId,
+                    pc.Id,
+                    pc.CreatedAt,
+                    Status = pc.Status.ToString(),
+                    pc.AssignedDoctorUserId,
+                    DoctorName = pc.AssignedDoctor != null
+                        ? (pc.AssignedDoctor.DoctorDisplayName ?? pc.AssignedDoctor.Email ?? pc.AssignedDoctor.UserName)
+                        : null
+                })
                 .ToListAsync();
 
             return patients.Select(p =>
             {
-                var latestCase = latestCases.FirstOrDefault(c => c.PatientId == p.Id);
+                var rows = caseRows.Where(c => c.PatientId == p.Id).ToList();
+                var latestCase = rows.FirstOrDefault();
+                var doctors = new List<PatientDoctorDto>();
+                var seen = new HashSet<string>();
+                foreach (var row in rows)
+                {
+                    if (string.IsNullOrWhiteSpace(row.AssignedDoctorUserId) || !seen.Add(row.AssignedDoctorUserId))
+                        continue;
+                    doctors.Add(new PatientDoctorDto
+                    {
+                        Id = row.AssignedDoctorUserId,
+                        Name = string.IsNullOrWhiteSpace(row.DoctorName) ? "Mjek" : row.DoctorName
+                    });
+                }
+
                 return new PatientResponseDto
                 {
                     Id = p.Id,
@@ -73,7 +98,11 @@ namespace ClinicOps.Application.Services.Patient
                     CreatedAt = p.CreatedAt,
                     IsActive = p.IsActive,
                     PatientCaseId = latestCase?.Id,
-                    PatientCaseStatus = latestCase?.Status.ToString()
+                    PatientCaseStatus = latestCase?.Status,
+                    AssignedDoctorUserId = latestCase?.AssignedDoctorUserId,
+                    AssignedDoctorName = doctors.FirstOrDefault()?.Name,
+                    Doctors = doctors,
+                    DoctorNames = doctors.Count == 0 ? null : string.Join(", ", doctors.Select(d => d.Name))
                 };
             }).ToList();
         }
@@ -100,6 +129,16 @@ namespace ClinicOps.Application.Services.Patient
                 .Where(pc => pc.PatientId == patientId && pc.ClinicId == clinicId)
                 .OrderByDescending(pc => pc.CreatedAt)
                 .ToListAsync();
+
+            var currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst("sub")?.Value;
+            if (isDoctor)
+            {
+                cases = cases
+                    .Where(pc => pc.AssignedDoctorUserId == currentUserId)
+                    .ToList();
+                if (cases.Count == 0)
+                    throw new UnauthorizedAccessException("Nuk keni qasje në historinë e këtij pacienti.");
+            }
 
             var caseIds = cases.Select(c => c.Id).ToList();
 
@@ -169,7 +208,6 @@ namespace ClinicOps.Application.Services.Patient
                 };
             }).ToList();
 
-            var currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst("sub")?.Value;
             await _auditLogService.TryLogAsync("MedicalRecordViewed", "PatientEMR", patientId.ToString(), clinicId, currentUserId);
 
             return new PatientEmrDto

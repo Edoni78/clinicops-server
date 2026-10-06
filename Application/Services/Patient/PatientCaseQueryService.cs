@@ -68,6 +68,30 @@ namespace ClinicOps.Application.Services.Patient
                 .ToListAsync();
         }
 
+        public async Task EnsureCurrentDoctorMayAccessAsync(Guid caseId, ClaimsPrincipal user)
+        {
+            if (!user.IsInRole("Doctor") || user.IsInRole("SuperAdmin"))
+                return;
+
+            var (_, clinicId) = await ResolveClinicIdAsync(user);
+            var assigned = await _db.PatientCases
+                .AsNoTracking()
+                .Where(pc => pc.Id == caseId && pc.ClinicId == clinicId)
+                .Select(pc => new { pc.AssignedDoctorUserId, pc.Status })
+                .FirstOrDefaultAsync();
+
+            if (assigned == null)
+                throw new KeyNotFoundException("Patient case not found.");
+
+            var doctorUserId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirst("sub")?.Value;
+            if (!string.IsNullOrWhiteSpace(doctorUserId) && assigned.AssignedDoctorUserId != doctorUserId)
+                throw new UnauthorizedAccessException("This patient case is assigned to another doctor.");
+
+            if (assigned.Status == PatientCaseStatus.Waiting)
+                throw new UnauthorizedAccessException(
+                    "Pacienti ende nuk është dërguar nga infermieri. Pritni derisa infermieri të klikojë «Dërgo te mjeku».");
+        }
+
         public async Task<PatientCaseDetailDto> GetByIdAsync(Guid caseId, ClaimsPrincipal user)
         {
             var (_, clinicId) = await ResolveClinicIdAsync(user);
@@ -89,7 +113,7 @@ namespace ClinicOps.Application.Services.Patient
 
                 if (@case.Status == PatientCaseStatus.Waiting)
                     throw new UnauthorizedAccessException(
-                        "Pacienti ende nuk është dërguar nga infermieri. Pritni derisa infermieri të klikojë «Vazhdo te mjeku».");
+                        "Pacienti ende nuk është dërguar nga infermieri. Pritni derisa infermieri të klikojë «Dërgo te mjeku».");
             }
 
             var latestVitals = await _db.VitalSigns
