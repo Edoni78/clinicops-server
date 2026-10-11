@@ -50,6 +50,25 @@ namespace ClinicOps.API.Controllers
             }
         }
 
+        [HttpPost("confirm-password")]
+        [Authorize]
+        public async Task<IActionResult> ConfirmPassword([FromBody] ConfirmPasswordRequest request)
+        {
+            var userId = User.GetUserId();
+            if (string.IsNullOrWhiteSpace(userId))
+                return Unauthorized(new { message = "Sesioni nuk është i vlefshëm. Hyni përsëri." });
+
+            try
+            {
+                await _authLoginService.ConfirmCurrentPasswordAsync(userId, request.Password);
+                return Ok();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+        }
+
         [HttpPost("mfa/setup")]
         [Authorize]
         public async Task<ActionResult<MfaSetupResponse>> GenerateMfaSetup()

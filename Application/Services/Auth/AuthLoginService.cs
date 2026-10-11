@@ -96,6 +96,17 @@ namespace ClinicOps.Application.Services.Auth
             return authResponse;
         }
 
+        public async Task ConfirmCurrentPasswordAsync(string userId, string password)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                throw new UnauthorizedAccessException("Sesioni nuk është i vlefshëm. Hyni përsëri.");
+
+            var matches = !string.IsNullOrEmpty(password) && await _userManager.CheckPasswordAsync(user, password);
+            if (!matches)
+                throw new UnauthorizedAccessException("Fjalëkalimi nuk është i saktë.");
+        }
+
         public async Task<AuthResponse> VerifyMfaLoginAsync(VerifyLoginMfaRequest request)
         {
             if (!_memoryCache.TryGetValue<string>(MfaTicketPrefix + request.MfaTicket, out var userId) || string.IsNullOrWhiteSpace(userId))

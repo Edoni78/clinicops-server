@@ -127,7 +127,7 @@ namespace ClinicOps.Application.Services.Pdf
                 var baseHref = m.BaseUrl.TrimEnd('/') + "/";
                 sb.Append("<base href=\"").Append(System.Net.WebUtility.HtmlEncode(baseHref)).Append("\">");
             }
-            sb.Append("<style>@page{size:A4;margin:20mm;} body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#262626;} #clinic-case-report{width:170mm;max-width:170mm;margin:0 auto;background:#ffffff;} *{box-sizing:border-box;} .clinical-note-text{white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;line-height:1.5;}</style></head><body>");
+            sb.Append("<style>@page{size:A4;margin:20mm;} body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#262626;} #clinic-case-report{width:170mm;max-width:170mm;margin:0 auto;background:#ffffff;} *{box-sizing:border-box;} .clinical-note-text{white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;line-height:1.5;} .report-footer{position:fixed;left:0;right:0;bottom:0;width:100%;box-sizing:border-box;margin-top:10px;padding-top:6px;border-top:1px solid #cbd5e1;font-size:10px;color:#64748b;display:flex;justify-content:space-between;gap:8px;align-items:center;background:#fff;}</style></head><body>");
 
             sb.Append("<div id='clinic-case-report' style='position:relative; width:194mm; margin:0 auto; background:#ffffff; color:#1e293b; font-family:Arial, sans-serif; box-sizing:border-box; padding:14px 16px 10px 16px; line-height:1.35;'>");
             if (!string.IsNullOrWhiteSpace(watermarkLogoSrc))
@@ -136,7 +136,7 @@ namespace ClinicOps.Application.Services.Pdf
                 sb.Append("<img src='").Append(watermarkLogoSrc).Append("' alt='' style='width:150%; max-width:none; height:auto; object-fit:contain; opacity:0.08;'/>");
                 sb.Append("</div>");
             }
-            sb.Append("<div style='position:relative; z-index:1;'>");
+            sb.Append("<div style='position:relative; z-index:1; padding-bottom:12mm;'>");
             sb.Append("<div style='border-bottom:1px solid #d6d6d6; padding-bottom:10px; margin-bottom:10px;'>");
             sb.Append("<div style='display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap;'>");
             sb.Append("<div style='display:flex; align-items:center; gap:10px; flex:1; min-width:200px;'>");
@@ -220,7 +220,7 @@ namespace ClinicOps.Application.Services.Pdf
             sb.Append("<div style='margin-top:8px; border-top:1px solid #464646; width:68mm;'></div>");
             sb.Append("<div style='margin-top:4px; font-size:11px; color:#787878;'>Vula</div>");
             sb.Append("</div></div></div>");
-            sb.Append("<div style='margin-top:10px; padding-top:6px; border-top:1px solid #cbd5e1; font-size:10px; color:#64748b; display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; align-items:center;'>");
+            sb.Append("<div class='report-footer'>");
             sb.Append("<span>").Append(clinicName).Append(" · Dokument zyrtar mjekësor");
             if (!string.IsNullOrWhiteSpace(m.ProtocolNumber))
                 sb.Append(" · Nr. protokollit: ").Append(protocolNumber);

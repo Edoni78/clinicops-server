@@ -360,8 +360,7 @@ namespace clinicops.Migrations
 
                     b.Property<string>("Diagnosis")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
+                        .HasColumnType("longtext");
 
                     b.Property<Guid>("DoctorId")
                         .HasColumnType("char(36)");

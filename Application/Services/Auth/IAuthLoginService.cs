@@ -6,5 +6,6 @@ namespace ClinicOps.Application.Services.Auth
     {
         Task<AuthResponse> LoginAsync(LoginRequest request);
         Task<AuthResponse> VerifyMfaLoginAsync(VerifyLoginMfaRequest request);
+        Task ConfirmCurrentPasswordAsync(string userId, string password);
     }
 }

@@ -19,7 +19,6 @@ namespace ClinicOps.Domain.Entities
         public string? Ekzaminimi { get; set; }
 
         [Required]
-        [MaxLength(500)]
         public string Diagnosis { get; set; } = null!;
 
         [Required]

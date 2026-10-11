@@ -10,4 +10,10 @@ namespace ClinicOps.API.DTOs.Auth
         [Required]
         public string Password { get; set; } = null!;
     }
+
+    public class ConfirmPasswordRequest
+    {
+        [Required]
+        public string Password { get; set; } = null!;
+    }
 }
