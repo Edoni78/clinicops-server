@@ -100,7 +100,9 @@ namespace ClinicOps.Application.Services.Pdf
                 m.BaseUrl,
                 m.ClinicLogoUrl,
                 "https://via.placeholder.com/120x120?text=Logo");
-            var watermarkLogoSrc = BuildOptionalImageUrl(m.BaseUrl, m.ClinicLogoDataUri, m.ClinicLogoUrl);
+            var watermarkLogoSrc = m.ShowPdfWatermark
+                ? BuildOptionalImageUrl(m.BaseUrl, m.ClinicLogoDataUri, m.ClinicLogoUrl)
+                : null;
             var signatureSrc = BuildImageUrlLikeLogo(
                 m.BaseUrl,
                 m.SignatureUrl,

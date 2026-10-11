@@ -78,6 +78,7 @@ namespace ClinicOps.Application.Services.Patient
                 ClinicPhone = @case.Clinic?.Phone,
                 ClinicLogoUrl = @case.Clinic?.LogoUrl,
                 ClinicLogoDataUri = TryReadFileAsDataUri(_env, @case.Clinic?.LogoUrl),
+                ShowPdfWatermark = @case.Clinic?.ShowPdfWatermark ?? true,
                 PatientFirstName = @case.Patient.FirstName,
                 PatientLastName = @case.Patient.LastName,
                 PatientDateOfBirth = @case.Patient.DateOfBirth,

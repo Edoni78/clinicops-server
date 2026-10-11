@@ -20,6 +20,7 @@ namespace ClinicOps.API.DTOs.Clinic
         public ClinicVitalPreferencesDto VitalPreferences { get; set; } = new();
         public ClinicProtocolPreferencesDto ProtocolPreferences { get; set; } = new();
         public ClinicColorThemePreferencesDto ColorThemePreferences { get; set; } = new();
+        public bool ShowPdfWatermark { get; set; } = true;
     }
 
     /// <summary>
@@ -45,5 +46,6 @@ namespace ClinicOps.API.DTOs.Clinic
         public ClinicVitalPreferencesDto? VitalPreferences { get; set; }
         public ClinicProtocolPreferencesDto? ProtocolPreferences { get; set; }
         public ClinicColorThemePreferencesDto? ColorThemePreferences { get; set; }
+        public bool? ShowPdfWatermark { get; set; }
     }
 }

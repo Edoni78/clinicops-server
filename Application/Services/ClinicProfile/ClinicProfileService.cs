@@ -49,6 +49,8 @@ namespace ClinicOps.Application.Services.ClinicProfile
             ClinicPreferencesMapper.ApplyVital(request.VitalPreferences, clinic);
             ClinicPreferencesMapper.ApplyProtocol(request.ProtocolPreferences, clinic);
             ClinicPreferencesMapper.ApplyColorTheme(request.ColorThemePreferences, clinic);
+            if (request.ShowPdfWatermark.HasValue)
+                clinic.ShowPdfWatermark = request.ShowPdfWatermark.Value;
 
             await _db.SaveChangesAsync();
             return MapProfile(clinic);
@@ -96,6 +98,7 @@ namespace ClinicOps.Application.Services.ClinicProfile
             VitalPreferences = ClinicPreferencesMapper.ToVitalDto(clinic),
             ProtocolPreferences = ClinicPreferencesMapper.ToProtocolDto(clinic),
             ColorThemePreferences = ClinicPreferencesMapper.ToColorThemeDto(clinic),
+            ShowPdfWatermark = clinic.ShowPdfWatermark,
         };
     }
 }

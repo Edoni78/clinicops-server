@@ -14,6 +14,8 @@ namespace ClinicOps.Application.Services.Pdf
         public string? ClinicLogoUrl { get; set; }
         /// <summary>Clinic logo image as data URI for robust PDF rendering.</summary>
         public string? ClinicLogoDataUri { get; set; }
+        /// <summary>When false, the clinic logo is not drawn as a page watermark.</summary>
+        public bool ShowPdfWatermark { get; set; } = true;
         public string PatientFirstName { get; set; } = null!;
         public string PatientLastName { get; set; } = null!;
         public DateTime? PatientDateOfBirth { get; set; }

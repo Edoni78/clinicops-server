@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace clinicops.Migrations
 {
     /// <inheritdoc />
-    public partial class TestInt : Migration
+    public partial class NewInit : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -116,7 +116,8 @@ namespace clinicops.Migrations
                     UseProtocolNumber = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     ProtocolEditableByNurse = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     ProtocolEditableByDoctor = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    ColorTheme = table.Column<int>(type: "int", nullable: false)
+                    ColorTheme = table.Column<int>(type: "int", nullable: false),
+                    ShowPdfWatermark = table.Column<bool>(type: "tinyint(1)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -573,7 +574,7 @@ namespace clinicops.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Ekzaminimi = table.Column<string>(type: "varchar(2000)", maxLength: 2000, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Diagnosis = table.Column<string>(type: "varchar(500)", maxLength: 500, nullable: false)
+                    Diagnosis = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Therapy = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
@@ -671,12 +672,12 @@ namespace clinicops.Migrations
             migrationBuilder.InsertData(
                 table: "AspNetUsers",
                 columns: new[] { "Id", "AccessFailedCount", "ClinicId", "ConcurrencyStamp", "CreatedAt", "DoctorDisplayName", "Email", "EmailConfirmed", "IsActive", "LockoutEnabled", "LockoutEnd", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "SecurityStamp", "SignatureUrl", "StampUrl", "TwoFactorEnabled", "UserName" },
-                values: new object[] { "SuperAdmin", 0, null, "3f621f97-c88b-4136-8679-f6bc9be6f145", new DateTime(2026, 10, 2, 16, 36, 32, 59, DateTimeKind.Utc).AddTicks(7684), null, "superadmin@clinicops.local", true, true, false, null, "SUPERADMIN@CLINICOPS.LOCAL", "SUPERADMIN@CLINICOPS.LOCAL", "AQAAAAIAAYagAAAAEGBO/lSGtwqreQ0r+hXFNO2RgZ628X5ZJiphriXXcd9IkxhrBEFO5Oe8GNjKbnuzrg==", null, false, "STATIC-SECURITY-STAMP", null, null, false, "superadmin@clinicops.local" });
+                values: new object[] { "SuperAdmin", 0, null, "ab52d5d5-58db-4abf-bbb4-71906b1060e5", new DateTime(2026, 10, 11, 12, 48, 37, 160, DateTimeKind.Utc).AddTicks(4585), null, "superadmin@clinicops.local", true, true, false, null, "SUPERADMIN@CLINICOPS.LOCAL", "SUPERADMIN@CLINICOPS.LOCAL", "AQAAAAIAAYagAAAAEMeYGvqVlLWEvo6tcUZ/8U12FoXITzDj7yUy/d/e8L9on9n2Nu4nCxWalgid6qOW5w==", null, false, "STATIC-SECURITY-STAMP", null, null, false, "superadmin@clinicops.local" });
 
             migrationBuilder.InsertData(
                 table: "Clinics",
-                columns: new[] { "Id", "Address", "ClinicMode", "ColorTheme", "CreatedAt", "Description", "EnableVitalBloodPressure", "EnableVitalHeartRate", "EnableVitalTemperature", "EnableVitalWeight", "IsActive", "LogoUrl", "Name", "Phone", "ProtocolEditableByDoctor", "ProtocolEditableByNurse", "UseProtocolNumber" },
-                values: new object[] { new Guid("11111111-1111-1111-1111-111111111111"), "123 Test Street", 1, 0, new DateTime(2026, 10, 2, 16, 36, 32, 96, DateTimeKind.Utc).AddTicks(8795), null, true, true, true, true, true, null, "Default Test Clinic", "+1234567890", true, true, false });
+                columns: new[] { "Id", "Address", "ClinicMode", "ColorTheme", "CreatedAt", "Description", "EnableVitalBloodPressure", "EnableVitalHeartRate", "EnableVitalTemperature", "EnableVitalWeight", "IsActive", "LogoUrl", "Name", "Phone", "ProtocolEditableByDoctor", "ProtocolEditableByNurse", "ShowPdfWatermark", "UseProtocolNumber" },
+                values: new object[] { new Guid("11111111-1111-1111-1111-111111111111"), "123 Test Street", 1, 0, new DateTime(2026, 10, 11, 12, 48, 37, 196, DateTimeKind.Utc).AddTicks(3702), null, true, true, true, true, true, null, "Default Test Clinic", "+1234567890", true, true, true, false });
 
             migrationBuilder.InsertData(
                 table: "AspNetUserRoles",

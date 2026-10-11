@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace clinicops.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261002163632_TestInt")]
-    partial class TestInt
+    [Migration("20261011124837_NewInit")]
+    partial class NewInit
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -110,15 +110,15 @@ namespace clinicops.Migrations
                         {
                             Id = "SuperAdmin",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "3f621f97-c88b-4136-8679-f6bc9be6f145",
-                            CreatedAt = new DateTime(2026, 10, 2, 16, 36, 32, 59, DateTimeKind.Utc).AddTicks(7684),
+                            ConcurrencyStamp = "ab52d5d5-58db-4abf-bbb4-71906b1060e5",
+                            CreatedAt = new DateTime(2026, 10, 11, 12, 48, 37, 160, DateTimeKind.Utc).AddTicks(4585),
                             Email = "superadmin@clinicops.local",
                             EmailConfirmed = true,
                             IsActive = true,
                             LockoutEnabled = false,
                             NormalizedEmail = "SUPERADMIN@CLINICOPS.LOCAL",
                             NormalizedUserName = "SUPERADMIN@CLINICOPS.LOCAL",
-                            PasswordHash = "AQAAAAIAAYagAAAAEGBO/lSGtwqreQ0r+hXFNO2RgZ628X5ZJiphriXXcd9IkxhrBEFO5Oe8GNjKbnuzrg==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEMeYGvqVlLWEvo6tcUZ/8U12FoXITzDj7yUy/d/e8L9on9n2Nu4nCxWalgid6qOW5w==",
                             PhoneNumberConfirmed = false,
                             SecurityStamp = "STATIC-SECURITY-STAMP",
                             TwoFactorEnabled = false,
@@ -237,6 +237,9 @@ namespace clinicops.Migrations
                     b.Property<bool>("ProtocolEditableByNurse")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("ShowPdfWatermark")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UseProtocolNumber")
                         .HasColumnType("tinyint(1)");
 
@@ -251,7 +254,7 @@ namespace clinicops.Migrations
                             Address = "123 Test Street",
                             ClinicMode = 1,
                             ColorTheme = 0,
-                            CreatedAt = new DateTime(2026, 10, 2, 16, 36, 32, 96, DateTimeKind.Utc).AddTicks(8795),
+                            CreatedAt = new DateTime(2026, 10, 11, 12, 48, 37, 196, DateTimeKind.Utc).AddTicks(3702),
                             EnableVitalBloodPressure = true,
                             EnableVitalHeartRate = true,
                             EnableVitalTemperature = true,
@@ -261,6 +264,7 @@ namespace clinicops.Migrations
                             Phone = "+1234567890",
                             ProtocolEditableByDoctor = true,
                             ProtocolEditableByNurse = true,
+                            ShowPdfWatermark = true,
                             UseProtocolNumber = false
                         });
                 });
@@ -363,8 +367,7 @@ namespace clinicops.Migrations
 
                     b.Property<string>("Diagnosis")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
+                        .HasColumnType("longtext");
 
                     b.Property<Guid>("DoctorId")
                         .HasColumnType("char(36)");

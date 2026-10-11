@@ -40,6 +40,8 @@ namespace ClinicOps.Domain.Entities
 
         public ClinicColorTheme ColorTheme { get; set; } = ClinicColorTheme.Default;
 
+        public bool ShowPdfWatermark { get; set; } = true;
+
         public bool IsSoloDoctor => ClinicMode == ClinicMode.SoloDoctor;
 
         public bool IncludesNurseWorkflow() => !IsSoloDoctor;
