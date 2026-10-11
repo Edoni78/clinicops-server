@@ -176,10 +176,14 @@ namespace ClinicOps.Application.Services.Patient
                 throw new InvalidOperationException("Assigned doctor not found in this clinic.");
 
             var roles = await _userManager.GetRolesAsync(doctor);
-            if (!roles.Contains("Doctor", StringComparer.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Selected user is not a doctor in this clinic.");
+            if (roles.Contains("Doctor", StringComparer.OrdinalIgnoreCase))
+                return doctor;
 
-            return doctor;
+            var clinic = await _db.Clinics.AsNoTracking().FirstOrDefaultAsync(c => c.Id == clinicId);
+            if (clinic?.IsSoloDoctor == true && roles.Contains("ClinicAdmin", StringComparer.OrdinalIgnoreCase))
+                return doctor;
+
+            throw new InvalidOperationException("Selected user is not a doctor in this clinic.");
         }
     }
 }

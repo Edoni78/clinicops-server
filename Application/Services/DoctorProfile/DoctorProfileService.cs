@@ -18,6 +18,19 @@ namespace ClinicOps.Application.Services.DoctorProfile
             _imageStorage = imageStorage;
         }
 
+        public async Task EnsureAccessAsync(string userId, bool isDoctor)
+        {
+            if (isDoctor) return;
+
+            var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+            if (user?.ClinicId == null)
+                throw new UnauthorizedAccessException("Nuk keni qasje në profilin e mjekut.");
+
+            var clinic = await _db.Clinics.AsNoTracking().FirstOrDefaultAsync(c => c.Id == user.ClinicId);
+            if (clinic == null || !clinic.IsSoloDoctor)
+                throw new UnauthorizedAccessException("Profili i mjekut është i disponueshëm për ordinancën solo.");
+        }
+
         public async Task<DoctorProfileDto> GetProfileAsync(string userId)
         {
             var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);

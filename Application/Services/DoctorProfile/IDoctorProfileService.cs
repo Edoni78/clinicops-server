@@ -5,6 +5,7 @@ namespace ClinicOps.Application.Services.DoctorProfile
 {
     public interface IDoctorProfileService
     {
+        Task EnsureAccessAsync(string userId, bool isDoctor);
         Task<DoctorProfileDto> GetProfileAsync(string userId);
         Task<DoctorProfileDto> UpdateProfileAsync(string userId, UpdateDoctorProfileRequest request);
         Task<DoctorProfileDto> UploadSignatureAsync(string userId, IFormFile? file, CancellationToken cancellationToken = default);

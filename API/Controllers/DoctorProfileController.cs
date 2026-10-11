@@ -8,7 +8,7 @@ namespace ClinicOps.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Doctor")]
+    [Authorize(Roles = "Doctor,ClinicAdmin")]
     public class DoctorProfileController : ControllerBase
     {
         private readonly IDoctorProfileService _doctorProfileService;
@@ -29,7 +29,12 @@ namespace ClinicOps.API.Controllers
 
             try
             {
+                await _doctorProfileService.EnsureAccessAsync(userId, User.IsInRole("Doctor"));
                 return Ok(await _doctorProfileService.GetProfileAsync(userId));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
             }
             catch (KeyNotFoundException ex)
             {
@@ -48,7 +53,12 @@ namespace ClinicOps.API.Controllers
 
             try
             {
+                await _doctorProfileService.EnsureAccessAsync(userId, User.IsInRole("Doctor"));
                 return Ok(await _doctorProfileService.UpdateProfileAsync(userId, request));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
             }
             catch (KeyNotFoundException ex)
             {
@@ -68,7 +78,12 @@ namespace ClinicOps.API.Controllers
 
             try
             {
+                await _doctorProfileService.EnsureAccessAsync(userId, User.IsInRole("Doctor"));
                 return Ok(await _doctorProfileService.UploadSignatureAsync(userId, file, cancellationToken));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
             }
             catch (InvalidOperationException ex)
             {
@@ -92,7 +107,12 @@ namespace ClinicOps.API.Controllers
 
             try
             {
+                await _doctorProfileService.EnsureAccessAsync(userId, User.IsInRole("Doctor"));
                 return Ok(await _doctorProfileService.UploadStampAsync(userId, file, cancellationToken));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
             }
             catch (InvalidOperationException ex)
             {

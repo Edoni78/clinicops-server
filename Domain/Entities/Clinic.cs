@@ -124,7 +124,6 @@ namespace ClinicOps.Domain.Entities
             decimal? temperatureC,
             int? heartRate)
         {
-            EnsureNurseWorkflowEnabled();
             EnsureVitalSubmissionAllowed(weightKg, systolicPressure, diastolicPressure, temperatureC, heartRate);
 
             return new VitalSigns

@@ -169,11 +169,8 @@ C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\pub
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\publish\clinicops.Tests.deps.json
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\publish\clinicops.Tests.runtimeconfig.json
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\publish\global.json
-C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\clinicops.staticwebassets.endpoints.json
-C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\rpswa.dswa.cache.json
-C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\rjimswa.dswa.cache.json
-C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
-C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
-C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\staticwebassets.build.json.cache
-C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\staticwebassets.build.endpoints.json
-C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\swae.build.ex.cache
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\staticwebassets\msbuild.clinicops.Microsoft.AspNetCore.StaticWebAssets.props
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\staticwebassets\msbuild.build.clinicops.props
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\staticwebassets\msbuild.buildMultiTargeting.clinicops.props
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\staticwebassets\msbuild.buildTransitive.clinicops.props
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\staticwebassets.pack.json
