@@ -13,6 +13,7 @@ namespace ClinicOps.Application.Services.ClinicSettings
             UseProtocolNumber = clinic.UseProtocolNumber,
             AllowNurseToSet = clinic.ProtocolEditableByNurse,
             AllowDoctorToSet = clinic.ProtocolEditableByDoctor,
+            NextProtocolNumber = clinic.NextProtocolNumber,
         };
 
         public static void ApplyVital(ClinicVitalPreferencesDto? dto, Clinic clinic) =>
@@ -24,6 +25,10 @@ namespace ClinicOps.Application.Services.ClinicSettings
             clinic.UseProtocolNumber = dto.UseProtocolNumber;
             clinic.ProtocolEditableByNurse = dto.AllowNurseToSet;
             clinic.ProtocolEditableByDoctor = dto.AllowDoctorToSet;
+            if (dto.NextProtocolNumber != null)
+                clinic.NextProtocolNumber = string.IsNullOrWhiteSpace(dto.NextProtocolNumber)
+                    ? null
+                    : dto.NextProtocolNumber.Trim();
         }
 
         public static ClinicColorThemePreferencesDto ToColorThemeDto(Clinic clinic) =>

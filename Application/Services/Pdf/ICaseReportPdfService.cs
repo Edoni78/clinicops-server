@@ -31,6 +31,8 @@ namespace ClinicOps.Application.Services.Pdf
         public string? BaseUrl { get; set; }
         /// <summary>Doctor display name for "signed by" in the PDF.</summary>
         public string? DoctorDisplayName { get; set; }
+        public string? DoctorTitle { get; set; }
+        public string? DoctorKoNumber { get; set; }
         /// <summary>Relative URL of doctor signature image (e.g. /uploads/doctors/xxx/signature.png).</summary>
         public string? SignatureUrl { get; set; }
         /// <summary>Relative URL of doctor stamp image (e.g. /uploads/doctors/xxx/stamp.png).</summary>

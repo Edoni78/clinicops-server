@@ -7,6 +7,7 @@ namespace ClinicOps.Application.Services.DoctorProfile
     {
         Task EnsureAccessAsync(string userId, bool isDoctor);
         Task<DoctorProfileDto> GetProfileAsync(string userId);
+        Task<DoctorSignoffDto> GetSignoffAsync(string targetUserId, string requesterUserId);
         Task<DoctorProfileDto> UpdateProfileAsync(string userId, UpdateDoctorProfileRequest request);
         Task<DoctorProfileDto> UploadSignatureAsync(string userId, IFormFile? file, CancellationToken cancellationToken = default);
         Task<DoctorProfileDto> UploadStampAsync(string userId, IFormFile? file, CancellationToken cancellationToken = default);

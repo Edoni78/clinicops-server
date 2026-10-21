@@ -53,15 +53,6 @@ namespace ClinicOps.Application.Services.Patient
             Guid clinicId,
             ClaimsPrincipal user)
         {
-            if (status == PatientCaseStatus.Mbyllur
-                && !user.IsInRole("Nurse")
-                && !user.IsInRole("ClinicAdmin")
-                && !user.IsInRole("SuperAdmin"))
-            {
-                throw new UnauthorizedAccessException(
-                    "Vetëm infermieri ose administratori mund të mbyllë rastin në raporte.");
-            }
-
             var @case = await _db.PatientCases
                 .FirstOrDefaultAsync(pc => pc.Id == caseId && pc.ClinicId == clinicId);
             if (@case == null)
@@ -71,12 +62,23 @@ namespace ClinicOps.Application.Services.Patient
             if (clinic == null)
                 throw new KeyNotFoundException("Clinic not found.");
 
+            if (status == PatientCaseStatus.Mbyllur
+                && !user.IsInRole("Nurse")
+                && !user.IsInRole("ClinicAdmin")
+                && !user.IsInRole("SuperAdmin")
+                && !(user.IsInRole("Doctor") && clinic.IsSoloDoctor))
+            {
+                throw new UnauthorizedAccessException(
+                    "Vetëm infermieri ose administratori mund të mbyllë rastin në raporte.");
+            }
+
             if (status == PatientCaseStatus.InConsultation)
             {
                 var anotherInConsultation = await _db.PatientCases.AnyAsync(pc =>
                     pc.ClinicId == clinicId
                     && pc.Id != caseId
-                    && pc.Status == PatientCaseStatus.InConsultation);
+                    && pc.Status == PatientCaseStatus.InConsultation
+                    && pc.AssignedDoctorUserId == @case.AssignedDoctorUserId);
                 if (anotherInConsultation)
                     throw new InvalidOperationException(
                         "Mjeku ka tashmë një pacient në konsultim. Përfundoni vizitën aktuale para se të hapni një tjetër.");

@@ -8,7 +8,7 @@ namespace ClinicOps.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Doctor,ClinicAdmin")]
+    [Authorize]
     public class DoctorProfileController : ControllerBase
     {
         private readonly IDoctorProfileService _doctorProfileService;
@@ -18,6 +18,7 @@ namespace ClinicOps.API.Controllers
             _doctorProfileService = doctorProfileService;
         }
 
+        [Authorize(Roles = "Doctor,ClinicAdmin")]
         [HttpGet("profile")]
         [ProducesResponseType(typeof(DoctorProfileDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -42,6 +43,26 @@ namespace ClinicOps.API.Controllers
             }
         }
 
+        [HttpGet("signoff/{userId}")]
+        [ProducesResponseType(typeof(DoctorSignoffDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<DoctorSignoffDto>> GetSignoff(string userId)
+        {
+            var requesterId = User.GetUserId();
+            if (string.IsNullOrEmpty(requesterId))
+                return Unauthorized();
+
+            try
+            {
+                return Ok(await _doctorProfileService.GetSignoffAsync(userId, requesterId));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+        }
+
+        [Authorize(Roles = "Doctor,ClinicAdmin")]
         [HttpPut("profile")]
         [ProducesResponseType(typeof(DoctorProfileDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -66,6 +87,7 @@ namespace ClinicOps.API.Controllers
             }
         }
 
+        [Authorize(Roles = "Doctor,ClinicAdmin")]
         [HttpPost("profile/signature")]
         [ProducesResponseType(typeof(DoctorProfileDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -95,6 +117,7 @@ namespace ClinicOps.API.Controllers
             }
         }
 
+        [Authorize(Roles = "Doctor,ClinicAdmin")]
         [HttpPost("profile/stamp")]
         [ProducesResponseType(typeof(DoctorProfileDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]

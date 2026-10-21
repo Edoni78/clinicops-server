@@ -13,5 +13,8 @@ namespace ClinicOps.API.DTOs.Clinic
 
         /// <summary>Doctor can enter or change the protocol number.</summary>
         public bool AllowDoctorToSet { get; set; } = true;
+
+        /// <summary>Next protocol number to assign when opening a case.</summary>
+        public string? NextProtocolNumber { get; set; }
     }
 }

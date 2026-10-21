@@ -121,6 +121,22 @@ namespace ClinicOps.API.Controllers
             }
         }
 
+        [AllowAnonymous]
+        [HttpGet("{id:guid}/emr/public")]
+        [ProducesResponseType(typeof(PatientEmrDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<PatientEmrDto>> GetPublicPatientEmr(Guid id)
+        {
+            try
+            {
+                return Ok(await _patientQueryService.GetPublicPatientEmrAsync(id));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
         [HttpGet("{id:guid}/emr")]
         [ProducesResponseType(typeof(PatientEmrDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

@@ -7,6 +7,7 @@ namespace ClinicOps.Application.Services.Patient
     {
         Task<List<PatientResponseDto>> GetAllPatientsAsync(Guid? clinicId, ClaimsPrincipal user);
         Task<PatientEmrDto> GetPatientEmrAsync(Guid patientId, bool doctorView, ClaimsPrincipal user);
+        Task<PatientEmrDto> GetPublicPatientEmrAsync(Guid patientId);
         Task DeletePatientAsync(Guid patientId, Guid? clinicId, ClaimsPrincipal user);
     }
 }

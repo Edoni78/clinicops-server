@@ -40,6 +40,8 @@ namespace ClinicOps.Application.Services.Patient
             var report = await _db.MedicalReports.FirstOrDefaultAsync(m => m.PatientCaseId == caseId);
 
             string? doctorDisplayName = null;
+            string? doctorTitle = null;
+            string? doctorKoNumber = null;
             string? signatureUrl = null;
             string? stampUrl = null;
             string? signatureDataUri = null;
@@ -57,6 +59,8 @@ namespace ClinicOps.Application.Services.Patient
                 if (doctorUser != null)
                 {
                     doctorDisplayName = doctorUser.DoctorDisplayName ?? doctorUser.Email;
+                    doctorTitle = doctorUser.DoctorTitle;
+                    doctorKoNumber = doctorUser.KoNumber;
                     signatureUrl = doctorUser.SignatureUrl;
                     stampUrl = doctorUser.StampUrl;
                     signatureDataUri = TryReadFileAsDataUri(_env, signatureUrl);
@@ -107,6 +111,8 @@ namespace ClinicOps.Application.Services.Patient
                 },
                 BaseUrl = baseUrl,
                 DoctorDisplayName = doctorDisplayName,
+                DoctorTitle = doctorTitle,
+                DoctorKoNumber = doctorKoNumber,
                 SignatureUrl = signatureUrl,
                 StampUrl = stampUrl,
                 SignatureDataUri = signatureDataUri,

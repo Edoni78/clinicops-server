@@ -225,6 +225,102 @@ namespace ClinicOps.Application.Services.Patient
             };
         }
 
+        public async Task<PatientEmrDto> GetPublicPatientEmrAsync(Guid patientId)
+        {
+            var patient = await _db.Patients
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == patientId && p.IsActive);
+            if (patient == null)
+                throw new KeyNotFoundException("Patient not found.");
+
+            var cases = await _db.PatientCases
+                .AsNoTracking()
+                .Where(pc => pc.PatientId == patientId && pc.ClinicId == patient.ClinicId)
+                .OrderByDescending(pc => pc.CreatedAt)
+                .ToListAsync();
+
+            var caseIds = cases.Select(c => c.Id).ToList();
+
+            var vitalsByCase = await _db.VitalSigns
+                .AsNoTracking()
+                .Where(v => caseIds.Contains(v.PatientCaseId))
+                .OrderBy(v => v.RecordedAt)
+                .GroupBy(v => v.PatientCaseId)
+                .ToDictionaryAsync(
+                    g => g.Key,
+                    g => g.Select(v => new PatientEmrVitalsDto
+                    {
+                        Id = v.Id,
+                        WeightKg = v.WeightKg,
+                        SystolicPressure = v.SystolicPressure,
+                        DiastolicPressure = v.DiastolicPressure,
+                        TemperatureC = v.TemperatureC,
+                        HeartRate = v.HeartRate,
+                        RecordedAt = v.RecordedAt
+                    }).ToList());
+
+            var reports = await _db.MedicalReports
+                .AsNoTracking()
+                .Where(r => caseIds.Contains(r.PatientCaseId))
+                .ToListAsync();
+
+            var doctorUserIds = reports
+                .Select(r => r.DoctorUserId)
+                .Where(idValue => !string.IsNullOrWhiteSpace(idValue))
+                .Distinct()
+                .Cast<string>()
+                .ToList();
+
+            var doctorLookup = await _db.Users
+                .AsNoTracking()
+                .Where(u => doctorUserIds.Contains(u.Id))
+                .Select(u => new { u.Id, Name = u.DoctorDisplayName ?? u.Email ?? u.UserName })
+                .ToDictionaryAsync(u => u.Id, u => u.Name ?? u.Id);
+
+            var reportLookup = reports.ToDictionary(r => r.PatientCaseId, r => r);
+
+            var history = cases.Select(pc =>
+            {
+                reportLookup.TryGetValue(pc.Id, out var report);
+                vitalsByCase.TryGetValue(pc.Id, out var vitals);
+                var doctorUserId = report?.DoctorUserId;
+                var doctorName = !string.IsNullOrWhiteSpace(doctorUserId) && doctorLookup.TryGetValue(doctorUserId, out var resolvedName)
+                    ? resolvedName
+                    : null;
+
+                return new PatientEmrConsultDto
+                {
+                    PatientCaseId = pc.Id,
+                    ConsultDate = pc.CompletedAt ?? report?.CreatedAt ?? pc.CreatedAt,
+                    CaseStatus = pc.Status.ToString(),
+                    CanEdit = false,
+                    Notes = null,
+                    DoctorUserId = null,
+                    DoctorName = doctorName,
+                    Anamneza = null,
+                    Ekzaminimi = null,
+                    Diagnosis = report?.Diagnosis,
+                    Therapy = report?.Therapy,
+                    ReportCreatedAt = report?.CreatedAt,
+                    Vitals = vitals ?? new List<PatientEmrVitalsDto>()
+                };
+            }).ToList();
+
+            return new PatientEmrDto
+            {
+                PatientId = patient.Id,
+                ClinicId = patient.ClinicId,
+                IsDoctorView = false,
+                IsReadOnly = true,
+                FirstName = patient.FirstName,
+                LastName = patient.LastName,
+                DateOfBirth = patient.DateOfBirth,
+                Gender = patient.Gender,
+                Phone = patient.Phone,
+                History = history
+            };
+        }
+
         public async Task DeletePatientAsync(Guid patientId, Guid? clinicId, ClaimsPrincipal user)
         {
             var patientQuery = _db.Patients.Where(p => p.Id == patientId && p.IsActive);

@@ -92,6 +92,8 @@ namespace ClinicOps.Application.Services.Pdf
             var patientPhone = H(m.PatientPhone ?? "—");
             var protocolNumber = H(string.IsNullOrWhiteSpace(m.ProtocolNumber) ? "—" : m.ProtocolNumber!.Trim());
             var doctorName = H(m.DoctorDisplayName ?? "—");
+            var doctorTitle = H(m.DoctorTitle ?? "");
+            var doctorKo = H(m.DoctorKoNumber ?? "");
             var anamneza = H(m.MedicalReport?.Anamneza ?? "");
             var ekzaminimi = H(m.MedicalReport?.Ekzaminimi ?? "");
             var diagnosis = H(m.MedicalReport?.Diagnosis ?? "");
@@ -203,6 +205,10 @@ namespace ClinicOps.Application.Services.Pdf
             sb.Append("<div>");
             sb.Append("<div style='font-size:11px; color:#787878;'>Mjeku përgjegjës</div>");
             sb.Append("<div style='margin-top:4px; font-size:12px; font-weight:700; color:#262626;'>").Append(doctorName).Append("</div>");
+            if (!string.IsNullOrWhiteSpace(m.DoctorTitle))
+                sb.Append("<div style='margin-top:2px; font-size:11px; color:#525252;'>").Append(doctorTitle).Append("</div>");
+            if (!string.IsNullOrWhiteSpace(m.DoctorKoNumber))
+                sb.Append("<div style='margin-top:2px; font-size:11px; color:#525252;'>KO: ").Append(doctorKo).Append("</div>");
             if (hasSignature)
             {
                 sb.Append("<div style='height:42px; margin-top:6px; display:flex; align-items:flex-end;'>");

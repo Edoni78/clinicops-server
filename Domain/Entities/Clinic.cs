@@ -38,6 +38,9 @@ namespace ClinicOps.Domain.Entities
         public bool ProtocolEditableByNurse { get; set; } = true;
         public bool ProtocolEditableByDoctor { get; set; } = true;
 
+        [MaxLength(100)]
+        public string? NextProtocolNumber { get; set; }
+
         public ClinicColorTheme ColorTheme { get; set; } = ClinicColorTheme.Default;
 
         public bool ShowPdfWatermark { get; set; } = true;
@@ -74,6 +77,28 @@ namespace ClinicOps.Domain.Entities
         }
 
         public bool IsProtocolRequired() => UseProtocolNumber;
+
+        public string? TakeNextProtocolNumber()
+        {
+            if (!UseProtocolNumber) return null;
+            var current = (NextProtocolNumber ?? "").Trim();
+            if (string.IsNullOrEmpty(current)) return null;
+            NextProtocolNumber = IncrementProtocolNumber(current);
+            return current;
+        }
+
+        public static string IncrementProtocolNumber(string value)
+        {
+            var text = (value ?? "").Trim();
+            var match = System.Text.RegularExpressions.Regex.Match(text, @"^(.*?)(\d+)$");
+            if (!match.Success) return text;
+            var prefix = match.Groups[1].Value;
+            var digits = match.Groups[2].Value;
+            var next = (long.Parse(digits) + 1).ToString();
+            if (next.Length < digits.Length)
+                next = next.PadLeft(digits.Length, '0');
+            return prefix + next;
+        }
 
         public bool CanEditProtocol(bool isClinicAdminOrSuperAdmin, bool isNurse, bool isDoctor)
         {

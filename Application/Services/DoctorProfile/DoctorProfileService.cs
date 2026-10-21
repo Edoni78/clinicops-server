@@ -39,6 +39,23 @@ namespace ClinicOps.Application.Services.DoctorProfile
             return MapDto(user);
         }
 
+        public async Task<DoctorSignoffDto> GetSignoffAsync(string targetUserId, string requesterUserId)
+        {
+            var requester = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == requesterUserId);
+            var doctor = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == targetUserId);
+            if (requester?.ClinicId == null || doctor?.ClinicId == null || requester.ClinicId != doctor.ClinicId)
+                throw new UnauthorizedAccessException("Nuk keni qasje në nënshkrimin e këtij mjeku.");
+
+            return new DoctorSignoffDto
+            {
+                Name = doctor.DoctorDisplayName ?? doctor.Email,
+                Title = doctor.DoctorTitle,
+                KoNumber = doctor.KoNumber,
+                SignatureUrl = doctor.SignatureUrl,
+                StampUrl = doctor.StampUrl
+            };
+        }
+
         public async Task<DoctorProfileDto> UpdateProfileAsync(string userId, UpdateDoctorProfileRequest request)
         {
             var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
@@ -47,6 +64,10 @@ namespace ClinicOps.Application.Services.DoctorProfile
 
             if (request.DisplayName != null)
                 user.DoctorDisplayName = request.DisplayName.Trim().Length > 0 ? request.DisplayName.Trim() : null;
+            if (request.Title != null)
+                user.DoctorTitle = request.Title.Trim().Length > 0 ? request.Title.Trim() : null;
+            if (request.KoNumber != null)
+                user.KoNumber = request.KoNumber.Trim().Length > 0 ? request.KoNumber.Trim() : null;
 
             await _db.SaveChangesAsync();
             return MapDto(user);
@@ -95,6 +116,8 @@ namespace ClinicOps.Application.Services.DoctorProfile
             UserId = user.Id,
             Email = user.Email,
             DisplayName = user.DoctorDisplayName ?? user.Email,
+            Title = user.DoctorTitle,
+            KoNumber = user.KoNumber,
             SignatureUrl = user.SignatureUrl,
             StampUrl = user.StampUrl
         };

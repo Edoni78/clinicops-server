@@ -46,7 +46,7 @@ namespace ClinicOps.Application.Services.Patient
             {
                 patient = existingPatient;
                 patientCase = await CreateOrReuseWaitingCaseAsync(
-                    clinicId,
+                    clinic,
                     patient.Id,
                     assignedDoctor.Id,
                     request.Notes);
@@ -69,7 +69,7 @@ namespace ClinicOps.Application.Services.Patient
                 await _db.SaveChangesAsync();
 
                 patientCase = await CreateOrReuseWaitingCaseAsync(
-                    clinicId,
+                    clinic,
                     patient.Id,
                     assignedDoctor.Id,
                     request.Notes);
@@ -101,7 +101,7 @@ namespace ClinicOps.Application.Services.Patient
             var assignedDoctor = await ValidateAssignedDoctorAsync(clinicId, request.AssignedDoctorUserId);
 
             var patientCase = await CreateOrReuseWaitingCaseAsync(
-                clinicId,
+                clinic,
                 patient.Id,
                 assignedDoctor.Id,
                 request.Notes);
@@ -110,7 +110,7 @@ namespace ClinicOps.Application.Services.Patient
         }
 
         private async Task<PatientCase> CreateOrReuseWaitingCaseAsync(
-            Guid clinicId,
+            Clinic clinic,
             Guid patientId,
             string assignedDoctorUserId,
             string? notes)
@@ -118,17 +118,26 @@ namespace ClinicOps.Application.Services.Patient
             var activeCase = await _db.PatientCases
                 .FirstOrDefaultAsync(pc =>
                     pc.PatientId == patientId &&
-                    pc.ClinicId == clinicId &&
+                    pc.ClinicId == clinic.Id &&
                     pc.Status == PatientCaseStatus.Waiting);
 
             if (activeCase != null)
             {
                 activeCase.UpdateWaitingAssignment(assignedDoctorUserId, notes);
+                if (string.IsNullOrWhiteSpace(activeCase.ProtocolNumber))
+                {
+                    var protocol = clinic.TakeNextProtocolNumber();
+                    if (!string.IsNullOrWhiteSpace(protocol))
+                        activeCase.SetProtocolNumber(protocol);
+                }
                 await _db.SaveChangesAsync();
                 return activeCase;
             }
 
-            var patientCase = PatientCase.OpenWaiting(clinicId, patientId, assignedDoctorUserId, notes);
+            var patientCase = PatientCase.OpenWaiting(clinic.Id, patientId, assignedDoctorUserId, notes);
+            var nextProtocol = clinic.TakeNextProtocolNumber();
+            if (!string.IsNullOrWhiteSpace(nextProtocol))
+                patientCase.SetProtocolNumber(nextProtocol);
             _db.PatientCases.Add(patientCase);
             await _db.SaveChangesAsync();
             return patientCase;
