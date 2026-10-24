@@ -56,6 +56,7 @@ builder.Services.AddScoped<IPatientCaseWorkflowService, PatientCaseWorkflowServi
 builder.Services.AddScoped<IPatientCaseQueryService, PatientCaseQueryService>();
 builder.Services.AddScoped<IPatientCaseCommandService, PatientCaseCommandService>();
 builder.Services.AddScoped<IPatientCaseLabService, PatientCaseLabService>();
+builder.Services.AddScoped<IPatientCaseDentalService, PatientCaseDentalService>();
 builder.Services.AddScoped<IPatientCasePdfFacadeService, PatientCasePdfFacadeService>();
 builder.Services.AddScoped<ICaseReportPdfService, CaseReportPdfService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();

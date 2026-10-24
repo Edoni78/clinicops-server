@@ -93,6 +93,7 @@ namespace ClinicOps.Application.Services.ClinicProfile
             LogoUrl = clinic.LogoUrl,
             Description = clinic.Description,
             ClinicMode = clinic.ClinicMode,
+            ClinicSpecialty = clinic.ClinicSpecialty,
             CreatedAt = clinic.CreatedAt,
             IsActive = clinic.IsActive,
             VitalPreferences = ClinicPreferencesMapper.ToVitalDto(clinic),

@@ -68,11 +68,13 @@ namespace ClinicOps.Application.Services.Auth
                 {
                     claims.Add(new Claim("clinicName", user.Clinic.Name));
                     claims.Add(new Claim("clinicMode", user.Clinic.ClinicMode.ToString()));
+                    claims.Add(new Claim("clinicSpecialty", user.Clinic.ClinicSpecialty.ToString()));
                 }
                 else
                 {
                     // Safe fallback when clinic relation is not loaded.
                     claims.Add(new Claim("clinicMode", ClinicMode.FullTeam.ToString()));
+                    claims.Add(new Claim("clinicSpecialty", ClinicSpecialty.General.ToString()));
                 }
             }
 

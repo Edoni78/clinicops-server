@@ -3100,7 +3100,7 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Admin\\.nuget\\packages\\": {},
+    "C:\\Users\\Admin\\AppData\\Local\\Temp\\cursor-sandbox-cache\\234d7e31d57d1102f49e6d160b5a7f65\\nuget": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
@@ -3109,7 +3109,7 @@
       "projectUniqueName": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\clinicops.Tests\\clinicops.Tests.csproj",
       "projectName": "clinicops.Tests",
       "projectPath": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\clinicops.Tests\\clinicops.Tests.csproj",
-      "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
+      "packagesPath": "C:\\Users\\Admin\\AppData\\Local\\Temp\\cursor-sandbox-cache\\234d7e31d57d1102f49e6d160b5a7f65\\nuget",
       "outputPath": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\clinicops.Tests\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [

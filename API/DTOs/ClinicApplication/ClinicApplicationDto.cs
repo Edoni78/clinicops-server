@@ -14,6 +14,7 @@ namespace ClinicOps.API.DTOs.ClinicApplication
         public DateTime? ReviewedAtUtc { get; set; }
         public string? ReviewNote { get; set; }
         public ClinicMode ClinicMode { get; set; }
+        public ClinicSpecialty ClinicSpecialty { get; set; }
     }
 
     public class ApproveRejectRequest

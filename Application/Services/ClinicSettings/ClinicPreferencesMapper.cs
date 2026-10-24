@@ -16,8 +16,16 @@ namespace ClinicOps.Application.Services.ClinicSettings
             NextProtocolNumber = clinic.NextProtocolNumber,
         };
 
-        public static void ApplyVital(ClinicVitalPreferencesDto? dto, Clinic clinic) =>
+        public static void ApplyVital(ClinicVitalPreferencesDto? dto, Clinic clinic)
+        {
+            if (clinic.IsStomatologic)
+            {
+                clinic.ApplySpecialtyDefaults();
+                return;
+            }
+
             ClinicVitalPreferencesMapper.ApplyToEntity(dto, clinic);
+        }
 
         public static void ApplyProtocol(ClinicProtocolPreferencesDto? dto, Clinic clinic)
         {

@@ -33,6 +33,8 @@ namespace ClinicOps.Application.Services.Patient
             if (@case == null)
                 throw new KeyNotFoundException("Patient case not found.");
 
+            var isStomatologic = @case.Clinic?.IsStomatologic == true;
+
             var latestVitals = await _db.VitalSigns
                 .Where(v => v.PatientCaseId == caseId)
                 .OrderByDescending(v => v.RecordedAt)
@@ -92,9 +94,9 @@ namespace ClinicOps.Application.Services.Patient
                 ProtocolNumber = @case.ProtocolNumber,
                 CreatedAt = @case.CreatedAt,
                 Notes = @case.Notes,
-                LatestVitals = latestVitals == null ? null : new VitalsModel
+                LatestVitals = isStomatologic || latestVitals == null ? null : new VitalsModel
                 {
-                    WeightKg = latestVitals.WeightKg,
+                    WeightKg = latestVitals!.WeightKg,
                     SystolicPressure = latestVitals.SystolicPressure,
                     DiastolicPressure = latestVitals.DiastolicPressure,
                     TemperatureC = latestVitals.TemperatureC,
@@ -118,7 +120,24 @@ namespace ClinicOps.Application.Services.Patient
                 SignatureDataUri = signatureDataUri,
                 StampDataUri = stampDataUri,
                 SignatureBytes = signatureBytes,
-                StampBytes = stampBytes
+                StampBytes = stampBytes,
+                IsStomatologic = isStomatologic,
+                DentalFindings = isStomatologic
+                    ? await _db.PatientCaseDentalFindings
+                        .AsNoTracking()
+                        .Where(f => f.PatientCaseId == caseId && f.ClinicId == clinicId)
+                        .OrderBy(f => f.ToothNumber)
+                        .Select(f => new DentalFindingPdfModel
+                        {
+                            ToothNumber = f.ToothNumber,
+                            Dentition = f.Dentition,
+                            Condition = f.Condition,
+                            Surfaces = f.Surfaces,
+                            Treatment = f.Treatment,
+                            Notes = f.Notes
+                        })
+                        .ToListAsync()
+                    : new List<DentalFindingPdfModel>()
             };
 
             var pdfBytes = await _pdfService.GenerateCaseReportPdfAsync(model);
@@ -127,7 +146,7 @@ namespace ClinicOps.Application.Services.Patient
                 .Where(l => l.PatientCaseId == caseId)
                 .OrderBy(l => l.UploadedAt)
                 .ToListAsync();
-            if (!isSoloDoctor && labResults.Count > 0)
+            if (!isSoloDoctor && !isStomatologic && labResults.Count > 0)
                 pdfBytes = MergeReportWithLabPdfs(pdfBytes, labResults);
 
             var fileName = $"CaseReport_{@case.Patient.LastName}_{@case.Patient.FirstName}_{caseId:N}.pdf";

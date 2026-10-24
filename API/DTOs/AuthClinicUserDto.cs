@@ -6,6 +6,8 @@
         public string Email { get; set; } = null!;
         public string? ClinicId { get; set; }
         public string? ClinicName { get; set; }
+        public string? ClinicMode { get; set; }
+        public string? ClinicSpecialty { get; set; }
         public string? Role { get; set; }
     }
 }

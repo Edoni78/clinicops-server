@@ -33,6 +33,7 @@ namespace ClinicOps.Application.Services.ClinicApplications
                     AdminEmail = a.AdminEmail,
                     Status = a.Status,
                     ClinicMode = a.ClinicMode,
+                    ClinicSpecialty = a.ClinicSpecialty,
                     CreatedAtUtc = a.CreatedAtUtc,
                     ReviewedAtUtc = a.ReviewedAtUtc,
                     ReviewNote = a.ReviewNote
@@ -61,9 +62,11 @@ namespace ClinicOps.Application.Services.ClinicApplications
                 {
                     Name = app.ClinicName,
                     ClinicMode = app.ClinicMode,
+                    ClinicSpecialty = app.ClinicSpecialty,
                     CreatedAt = DateTime.UtcNow,
                     IsActive = true
                 };
+                clinic.ApplySpecialtyDefaults();
                 _db.Clinics.Add(clinic);
                 await _db.SaveChangesAsync();
 

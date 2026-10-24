@@ -17,6 +17,7 @@ namespace ClinicOps.Domain.Entities
 
         public string? ReviewNote { get; set; }
         public ClinicMode ClinicMode { get; set; } = ClinicMode.FullTeam;
+        public ClinicSpecialty ClinicSpecialty { get; set; } = ClinicSpecialty.General;
 
         public bool CanBeReviewed() => Status == ApplicationStatus.Pending;
 

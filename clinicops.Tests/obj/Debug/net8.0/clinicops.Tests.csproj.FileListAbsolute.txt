@@ -6,7 +6,6 @@ C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\clinicops.Tests\bin\
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\clinicops.Tests\bin\Debug\net8.0\appsettings.json
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\clinicops.Tests\bin\Debug\net8.0\global.json
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\clinicops.Tests\bin\Debug\net8.0\clinicops.staticwebassets.runtime.json
-C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\clinicops.Tests\bin\Debug\net8.0\clinicops.exe
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\clinicops.Tests\bin\Debug\net8.0\testhost.exe
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\clinicops.Tests\bin\Debug\net8.0\xunit.runner.visualstudio.testadapter.dll
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\clinicops.Tests\bin\Debug\net8.0\xunit.runner.reporters.netcoreapp10.dll

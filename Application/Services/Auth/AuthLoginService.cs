@@ -158,6 +158,8 @@ namespace ClinicOps.Application.Services.Auth
                     Email = user.Email ?? string.Empty,
                     ClinicId = user.ClinicId?.ToString(),
                     ClinicName = user.Clinic?.Name,
+                    ClinicMode = user.Clinic?.ClinicMode.ToString(),
+                    ClinicSpecialty = user.Clinic?.ClinicSpecialty.ToString(),
                     Role = role
                 }
             };

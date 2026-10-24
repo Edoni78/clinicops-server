@@ -17,5 +17,8 @@ namespace ClinicOps.API.DTOs.Auth
         [Required]
         [EnumDataType(typeof(ClinicMode))]
         public ClinicMode ClinicMode { get; set; }
+
+        [EnumDataType(typeof(ClinicSpecialty))]
+        public ClinicSpecialty ClinicSpecialty { get; set; } = ClinicSpecialty.General;
     }
 }

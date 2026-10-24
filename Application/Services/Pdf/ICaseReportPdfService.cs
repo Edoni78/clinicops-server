@@ -27,6 +27,8 @@ namespace ClinicOps.Application.Services.Pdf
         public string? Notes { get; set; }
         public VitalsModel? LatestVitals { get; set; }
         public MedicalReportModel? MedicalReport { get; set; }
+        public bool IsStomatologic { get; set; }
+        public List<DentalFindingPdfModel> DentalFindings { get; set; } = new();
         /// <summary>Base URL for the API (e.g. https://localhost:5258) so PDF can load signature/stamp images.</summary>
         public string? BaseUrl { get; set; }
         /// <summary>Doctor display name for "signed by" in the PDF.</summary>
@@ -55,6 +57,16 @@ namespace ClinicOps.Application.Services.Pdf
         public decimal? TemperatureC { get; set; }
         public int? HeartRate { get; set; }
         public DateTime RecordedAt { get; set; }
+    }
+
+    public class DentalFindingPdfModel
+    {
+        public int ToothNumber { get; set; }
+        public string Dentition { get; set; } = "Adult";
+        public string Condition { get; set; } = "";
+        public string? Surfaces { get; set; }
+        public string? Treatment { get; set; }
+        public string? Notes { get; set; }
     }
 
     public class MedicalReportModel

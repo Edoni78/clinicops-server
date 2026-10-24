@@ -117,7 +117,7 @@ namespace ClinicOps.Application.Services.Pdf
             var hasBp = m.LatestVitals?.SystolicPressure.HasValue == true || m.LatestVitals?.DiastolicPressure.HasValue == true;
             var hasTemp = m.LatestVitals?.TemperatureC.HasValue == true;
             var hasHr = m.LatestVitals?.HeartRate.HasValue == true;
-            var showVitalsSection = hasWeight || hasBp || hasTemp || hasHr;
+            var showVitalsSection = !m.IsStomatologic && (hasWeight || hasBp || hasTemp || hasHr);
             var weight = hasWeight ? $"{m.LatestVitals!.WeightKg!.Value:F1} kg" : null;
             var bp = hasBp
                 ? $"{m.LatestVitals?.SystolicPressure?.ToString() ?? "—"} / {m.LatestVitals?.DiastolicPressure?.ToString() ?? "—"} mmHg"
@@ -188,6 +188,9 @@ namespace ClinicOps.Application.Services.Pdf
                     sb.Append("<div style='border:1px solid #e2e8f0; padding:8px;'><div style='font-size:11px; color:#64748b;'>Rrahjet e zemrës</div><div style='font-size:12px; color:#0f172a; margin-top:2px;'>").Append(H(hr!)).Append("</div></div>");
                 sb.Append("</div></div></div>");
             }
+
+            if (m.IsStomatologic)
+                AppendOdontogramHtml(sb, m.DentalFindings, H);
 
             sb.Append("<div style='border:1px solid #e2e8f0; margin-bottom:10px; page-break-inside:avoid;'>");
             sb.Append("<div style='background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:9px 12px; font-size:13px; color:#0f172a;'>Shënime klinike</div>");
@@ -282,6 +285,109 @@ namespace ClinicOps.Application.Services.Pdf
         }
 
         private static string NormalizeUrlPath(string url) => url.Replace("\\", "/");
+
+        private static void AppendOdontogramHtml(
+            StringBuilder sb,
+            List<DentalFindingPdfModel> findings,
+            Func<string?, string> H)
+        {
+            sb.Append("<div style='border:1px solid #e2e8f0; overflow:hidden; margin-bottom:10px; page-break-inside:avoid;'>");
+            sb.Append("<div style='background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:8px 12px; font-size:13px; color:#0f172a;'>Odontograma</div>");
+            sb.Append("<div style='padding:10px 12px;'>");
+
+            var adult = findings.Where(f => !string.Equals(f.Dentition, "Kids", StringComparison.OrdinalIgnoreCase)).ToList();
+            var kids = findings.Where(f => string.Equals(f.Dentition, "Kids", StringComparison.OrdinalIgnoreCase)).ToList();
+            AppendArchChart(sb, "Të rritur",
+                new[] { 18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28 },
+                new[] { 48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38 },
+                adult);
+            if (kids.Count > 0)
+                AppendArchChart(sb, "Fëmijë",
+                    new[] { 55, 54, 53, 52, 51, 61, 62, 63, 64, 65 },
+                    new[] { 85, 84, 83, 82, 81, 71, 72, 73, 74, 75 },
+                    kids);
+
+            sb.Append("<div style='display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; font-size:9px; color:#64748b;'>");
+            sb.Append("<span><span style='display:inline-block;width:8px;height:8px;background:#ef4444;border-radius:99px;margin-right:4px;'></span>Karies</span>");
+            sb.Append("<span><span style='display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:99px;margin-right:4px;'></span>Mbushje</span>");
+            sb.Append("<span><span style='display:inline-block;width:8px;height:8px;background:#d97706;border-radius:99px;margin-right:4px;'></span>Kurorë</span>");
+            sb.Append("<span><span style='display:inline-block;width:8px;height:8px;background:#7c3aed;border-radius:99px;margin-right:4px;'></span>Endodonci</span>");
+            sb.Append("<span><span style='display:inline-block;width:8px;height:8px;background:#059669;border-radius:99px;margin-right:4px;'></span>Implant</span>");
+            sb.Append("<span><span style='display:inline-block;width:8px;height:8px;background:#94a3b8;border-radius:99px;margin-right:4px;'></span>Mungon / ekstraktim</span>");
+            sb.Append("</div>");
+
+            if (findings.Count > 0)
+            {
+                sb.Append("<div style='margin-top:8px;'>");
+                foreach (var finding in findings.OrderBy(f => f.ToothNumber))
+                {
+                    var line = $"Dhëmbi {finding.ToothNumber}: {TranslateCondition(finding.Condition)}";
+                    if (!string.IsNullOrWhiteSpace(finding.Surfaces)) line += $" · {finding.Surfaces}";
+                    if (!string.IsNullOrWhiteSpace(finding.Treatment)) line += $" · {finding.Treatment}";
+                    if (!string.IsNullOrWhiteSpace(finding.Notes)) line += $" — {finding.Notes}";
+                    sb.Append("<div style='padding:4px 0; border-top:1px solid #e2e8f0; font-size:11px; color:#0f172a;'>").Append(H(line)).Append("</div>");
+                }
+                sb.Append("</div>");
+            }
+
+            sb.Append("</div></div>");
+        }
+
+        private static void AppendArchChart(StringBuilder sb, string title, int[] upper, int[] lower, List<DentalFindingPdfModel> findings)
+        {
+            var byTooth = findings
+                .GroupBy(f => f.ToothNumber)
+                .ToDictionary(g => g.Key, g => g.First());
+            sb.Append("<div style='margin-bottom:8px;'>");
+            sb.Append("<div style='font-size:10px; color:#64748b; text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px;'>").Append(title).Append("</div>");
+            AppendToothRow(sb, upper, byTooth);
+            sb.Append("<div style='height:6px;'></div>");
+            AppendToothRow(sb, lower, byTooth);
+            sb.Append("</div>");
+        }
+
+        private static void AppendToothRow(StringBuilder sb, int[] numbers, Dictionary<int, DentalFindingPdfModel> byTooth)
+        {
+            sb.Append("<div style='display:flex; justify-content:center; gap:2px;'>");
+            foreach (var n in numbers)
+            {
+                byTooth.TryGetValue(n, out var finding);
+                var condition = finding?.Condition ?? "Healthy";
+                var bg = ConditionColor(condition);
+                var fg = condition is "Healthy" or "Missing" ? "#334155" : "#fff";
+                var mark = condition is "Extraction" or "Missing" ? "×" : n.ToString();
+                sb.Append("<div style='width:18px; text-align:center;'>");
+                sb.Append("<div style='height:26px; border:1px solid #cbd5e1; border-radius:3px; background:").Append(bg)
+                    .Append("; color:").Append(fg).Append("; font-size:8px; font-weight:700; line-height:26px;'>").Append(mark).Append("</div>");
+                sb.Append("</div>");
+            }
+            sb.Append("</div>");
+        }
+
+        private static string ConditionColor(string? condition) => (condition ?? "") switch
+        {
+            "Caries" => "#ef4444",
+            "Filling" => "#0ea5e9",
+            "Crown" => "#d97706",
+            "Endo" => "#7c3aed",
+            "Implant" => "#059669",
+            "Extraction" => "#64748b",
+            "Missing" => "#94a3b8",
+            _ => "#f8fafc"
+        };
+
+        private static string TranslateCondition(string? condition) => (condition ?? "") switch
+        {
+            "Healthy" => "I shëndetshëm",
+            "Caries" => "Karies",
+            "Filling" => "Mbushje",
+            "Crown" => "Kurorë",
+            "Endo" => "Endodonci",
+            "Implant" => "Implant",
+            "Extraction" => "Ekstraktim",
+            "Missing" => "Mungon",
+            _ => condition ?? ""
+        };
 
         private static string FormatGenderLabel(string? gender)
         {

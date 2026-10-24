@@ -1,4 +1,5 @@
 using ClinicOps.API.DTOs.Patient;
+using ClinicOps.API.DTOs.PatientCase;
 using ClinicOps.Application.Services.Common;
 using ClinicOps.Application.Services.Audit;
 using ClinicOps.Infrastructure.Data;
@@ -119,6 +120,7 @@ namespace ClinicOps.Application.Services.Patient
 
             var patient = await _db.Patients
                 .AsNoTracking()
+                .Include(p => p.Clinic)
                 .FirstOrDefaultAsync(p => p.Id == patientId && p.ClinicId == clinicId && p.IsActive);
 
             if (patient == null)
@@ -179,11 +181,13 @@ namespace ClinicOps.Application.Services.Patient
                 .ToDictionaryAsync(u => u.Id, u => u.Name ?? u.Id);
 
             var reportLookup = reports.ToDictionary(r => r.PatientCaseId, r => r);
+            var dentalByCase = await LoadDentalFindingsByCaseAsync(caseIds);
 
             var history = cases.Select(pc =>
             {
                 reportLookup.TryGetValue(pc.Id, out var report);
                 vitalsByCase.TryGetValue(pc.Id, out var vitals);
+                dentalByCase.TryGetValue(pc.Id, out var dental);
 
                 var doctorUserId = report?.DoctorUserId;
                 var doctorName = !string.IsNullOrWhiteSpace(doctorUserId) && doctorLookup.TryGetValue(doctorUserId, out var resolvedName)
@@ -204,7 +208,9 @@ namespace ClinicOps.Application.Services.Patient
                     Diagnosis = report?.Diagnosis,
                     Therapy = report?.Therapy,
                     ReportCreatedAt = report?.CreatedAt,
-                    Vitals = vitals ?? new List<PatientEmrVitalsDto>()
+                    Vitals = vitals ?? new List<PatientEmrVitalsDto>(),
+                    DentalFindings = dental ?? new List<DentalFindingDto>(),
+                    ShowOdontogram = patient.Clinic?.IsStomatologic == true
                 };
             }).ToList();
 
@@ -216,6 +222,7 @@ namespace ClinicOps.Application.Services.Patient
                 ClinicId = patient.ClinicId,
                 IsDoctorView = effectiveDoctorView,
                 IsReadOnly = !effectiveDoctorView,
+                IsStomatologic = patient.Clinic?.IsStomatologic == true,
                 FirstName = patient.FirstName,
                 LastName = patient.LastName,
                 DateOfBirth = patient.DateOfBirth,
@@ -229,6 +236,7 @@ namespace ClinicOps.Application.Services.Patient
         {
             var patient = await _db.Patients
                 .AsNoTracking()
+                .Include(p => p.Clinic)
                 .FirstOrDefaultAsync(p => p.Id == patientId && p.IsActive);
             if (patient == null)
                 throw new KeyNotFoundException("Patient not found.");
@@ -278,11 +286,13 @@ namespace ClinicOps.Application.Services.Patient
                 .ToDictionaryAsync(u => u.Id, u => u.Name ?? u.Id);
 
             var reportLookup = reports.ToDictionary(r => r.PatientCaseId, r => r);
+            var dentalByCase = await LoadDentalFindingsByCaseAsync(caseIds);
 
             var history = cases.Select(pc =>
             {
                 reportLookup.TryGetValue(pc.Id, out var report);
                 vitalsByCase.TryGetValue(pc.Id, out var vitals);
+                dentalByCase.TryGetValue(pc.Id, out var dental);
                 var doctorUserId = report?.DoctorUserId;
                 var doctorName = !string.IsNullOrWhiteSpace(doctorUserId) && doctorLookup.TryGetValue(doctorUserId, out var resolvedName)
                     ? resolvedName
@@ -302,7 +312,9 @@ namespace ClinicOps.Application.Services.Patient
                     Diagnosis = report?.Diagnosis,
                     Therapy = report?.Therapy,
                     ReportCreatedAt = report?.CreatedAt,
-                    Vitals = vitals ?? new List<PatientEmrVitalsDto>()
+                    Vitals = vitals ?? new List<PatientEmrVitalsDto>(),
+                    DentalFindings = dental ?? new List<DentalFindingDto>(),
+                    ShowOdontogram = patient.Clinic?.IsStomatologic == true
                 };
             }).ToList();
 
@@ -312,6 +324,7 @@ namespace ClinicOps.Application.Services.Patient
                 ClinicId = patient.ClinicId,
                 IsDoctorView = false,
                 IsReadOnly = true,
+                IsStomatologic = patient.Clinic?.IsStomatologic == true,
                 FirstName = patient.FirstName,
                 LastName = patient.LastName,
                 DateOfBirth = patient.DateOfBirth,
@@ -348,6 +361,37 @@ namespace ClinicOps.Application.Services.Patient
 
             var userId = user.GetUserId();
             await _auditLogService.TryLogAsync("PatientDeleted", "Patient", patient.Id.ToString(), patient.ClinicId, userId);
+        }
+
+        private async Task<Dictionary<Guid, List<DentalFindingDto>>> LoadDentalFindingsByCaseAsync(List<Guid> caseIds)
+        {
+            if (caseIds.Count == 0)
+                return new Dictionary<Guid, List<DentalFindingDto>>();
+
+            var rows = await _db.PatientCaseDentalFindings
+                .AsNoTracking()
+                .Where(f => caseIds.Contains(f.PatientCaseId))
+                .OrderBy(f => f.ToothNumber)
+                .Select(f => new
+                {
+                    f.PatientCaseId,
+                    Finding = new DentalFindingDto
+                    {
+                        Id = f.Id,
+                        ToothNumber = f.ToothNumber,
+                        Dentition = f.Dentition,
+                        Condition = f.Condition,
+                        Surfaces = f.Surfaces,
+                        Treatment = f.Treatment,
+                        Notes = f.Notes,
+                        UpdatedAt = f.UpdatedAt
+                    }
+                })
+                .ToListAsync();
+
+            return rows
+                .GroupBy(r => r.PatientCaseId)
+                .ToDictionary(g => g.Key, g => g.Select(r => r.Finding).ToList());
         }
 
         private Task<(bool isSuperAdmin, Guid clinicId)> ResolveClinicIdAsync(ClaimsPrincipal user) =>

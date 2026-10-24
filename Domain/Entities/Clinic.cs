@@ -29,6 +29,8 @@ namespace ClinicOps.Domain.Entities
 
         public ClinicMode ClinicMode { get; set; } = ClinicMode.FullTeam;
 
+        public ClinicSpecialty ClinicSpecialty { get; set; } = ClinicSpecialty.General;
+
         public bool EnableVitalWeight { get; set; } = true;
         public bool EnableVitalBloodPressure { get; set; } = true;
         public bool EnableVitalTemperature { get; set; } = true;
@@ -47,9 +49,20 @@ namespace ClinicOps.Domain.Entities
 
         public bool IsSoloDoctor => ClinicMode == ClinicMode.SoloDoctor;
 
+        public bool IsStomatologic => ClinicSpecialty == ClinicSpecialty.Stomatologic;
+
+        public void ApplySpecialtyDefaults()
+        {
+            if (!IsStomatologic) return;
+            EnableVitalWeight = false;
+            EnableVitalBloodPressure = false;
+            EnableVitalTemperature = false;
+            EnableVitalHeartRate = false;
+        }
+
         public bool IncludesNurseWorkflow() => !IsSoloDoctor;
 
-        public bool IncludesLabWorkflow() => !IsSoloDoctor;
+        public bool IncludesLabWorkflow() => !IsSoloDoctor && !IsStomatologic;
 
         public void EnsureNurseWorkflowEnabled()
         {
@@ -127,6 +140,9 @@ namespace ClinicOps.Domain.Entities
             decimal? temperatureC,
             int? heartRate)
         {
+            if (IsStomatologic)
+                throw new InvalidOperationException("Ordinanca stomatologjike nuk regjistron shenja vitale.");
+
             if (weightKg.HasValue && !EnableVitalWeight)
                 throw new InvalidOperationException("Pesha nuk është e aktivizuar për këtë klinikë.");
 

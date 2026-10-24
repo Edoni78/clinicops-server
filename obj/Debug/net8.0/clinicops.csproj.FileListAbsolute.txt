@@ -1,7 +1,6 @@
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\appsettings.Development.json
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\appsettings.json
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\global.json
-C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\clinicops.exe
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\clinicops.deps.json
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\clinicops.runtimeconfig.json
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\clinicops.dll
@@ -174,3 +173,4 @@ C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\sta
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\staticwebassets\msbuild.buildMultiTargeting.clinicops.props
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\staticwebassets\msbuild.buildTransitive.clinicops.props
 C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\obj\Debug\net8.0\staticwebassets.pack.json
+C:\Users\Admin\Desktop\ClinicOps\clinicops-server\clinicops\bin\Debug\net8.0\clinicops.exe

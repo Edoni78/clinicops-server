@@ -20,6 +20,7 @@ namespace ClinicOps.Infrastructure.Data
         public DbSet<VitalSigns> VitalSigns => Set<VitalSigns>();
         public DbSet<MedicalReport> MedicalReports => Set<MedicalReport>();
         public DbSet<LabResult> LabResults => Set<LabResult>();
+        public DbSet<PatientCaseDentalFinding> PatientCaseDentalFindings => Set<PatientCaseDentalFinding>();
         public DbSet<Payment> Payments => Set<Payment>();
         public DbSet<ClinicApplication> ClinicApplications => Set<ClinicApplication>();
         public DbSet<Service> Services => Set<Service>();
@@ -94,6 +95,16 @@ namespace ClinicOps.Infrastructure.Data
                 .WithMany()
                 .HasForeignKey(l => l.PatientCaseId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<PatientCaseDentalFinding>()
+                .HasOne(f => f.PatientCase)
+                .WithMany()
+                .HasForeignKey(f => f.PatientCaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<PatientCaseDentalFinding>()
+                .HasIndex(f => new { f.PatientCaseId, f.ToothNumber, f.Dentition })
+                .IsUnique();
 
             builder.Entity<Payment>()
                 .HasOne(p => p.PatientCase)

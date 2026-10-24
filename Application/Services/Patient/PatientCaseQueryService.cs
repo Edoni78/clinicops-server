@@ -124,6 +124,25 @@ namespace ClinicOps.Application.Services.Patient
             var report = await _db.MedicalReports
                 .FirstOrDefaultAsync(m => m.PatientCaseId == caseId);
 
+            var dentalFindings = @case.Clinic.IsStomatologic
+                ? await _db.PatientCaseDentalFindings
+                    .AsNoTracking()
+                    .Where(f => f.PatientCaseId == caseId && f.ClinicId == clinicId)
+                    .OrderBy(f => f.ToothNumber)
+                    .Select(f => new DentalFindingDto
+                    {
+                        Id = f.Id,
+                        ToothNumber = f.ToothNumber,
+                        Dentition = f.Dentition,
+                        Condition = f.Condition,
+                        Surfaces = f.Surfaces,
+                        Treatment = f.Treatment,
+                        Notes = f.Notes,
+                        UpdatedAt = f.UpdatedAt
+                    })
+                    .ToListAsync()
+                : new List<DentalFindingDto>();
+
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirst("sub")?.Value;
             await _auditLogService.TryLogAsync("MedicalRecordViewed", "PatientCase", caseId.ToString(), clinicId, userId);
 
@@ -170,7 +189,9 @@ namespace ClinicOps.Application.Services.Patient
                 },
                 ProtocolNumber = @case.ProtocolNumber,
                 VitalPreferences = ClinicPreferencesMapper.ToVitalDto(@case.Clinic),
-                ProtocolPreferences = ClinicPreferencesMapper.ToProtocolDto(@case.Clinic)
+                ProtocolPreferences = ClinicPreferencesMapper.ToProtocolDto(@case.Clinic),
+                ClinicSpecialty = @case.Clinic.ClinicSpecialty,
+                DentalFindings = dentalFindings
             };
         }
 

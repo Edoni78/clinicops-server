@@ -43,6 +43,8 @@ namespace ClinicOps.API.DTOs.PatientCase
         public MedicalReportSummaryDto? MedicalReport { get; set; }
         public ClinicVitalPreferencesDto VitalPreferences { get; set; } = new();
         public ClinicProtocolPreferencesDto ProtocolPreferences { get; set; } = new();
+        public ClinicOps.Domain.Enums.ClinicSpecialty ClinicSpecialty { get; set; }
+        public List<DentalFindingDto> DentalFindings { get; set; } = new();
     }
 
     public class VitalSignsSummaryDto

@@ -15,6 +15,7 @@ namespace ClinicOps.API.DTOs.Clinic
         public string? LogoUrl { get; set; }
         public string? Description { get; set; }
         public ClinicMode ClinicMode { get; set; }
+        public ClinicSpecialty ClinicSpecialty { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsActive { get; set; }
         public ClinicVitalPreferencesDto VitalPreferences { get; set; } = new();

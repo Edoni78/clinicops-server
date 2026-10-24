@@ -23,6 +23,9 @@ namespace ClinicOps.Application.Services.Auth
             if (!Enum.IsDefined(typeof(ClinicMode), request.ClinicMode))
                 throw new InvalidOperationException("clinicMode is required and must be either SoloDoctor or FullTeam.");
 
+            if (!Enum.IsDefined(typeof(ClinicSpecialty), request.ClinicSpecialty))
+                throw new InvalidOperationException("clinicSpecialty must be either General or Stomatologic.");
+
             var existsUser = await _userManager.FindByEmailAsync(request.Email);
             if (existsUser != null)
                 throw new InvalidOperationException("Email already in use.");
@@ -41,7 +44,8 @@ namespace ClinicOps.Application.Services.Auth
                 ClinicName = request.ClinicName,
                 AdminEmail = request.Email,
                 AdminPasswordHash = passwordHash,
-                ClinicMode = request.ClinicMode
+                ClinicMode = request.ClinicMode,
+                ClinicSpecialty = request.ClinicSpecialty
             };
 
             _db.ClinicApplications.Add(app);

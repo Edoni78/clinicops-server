@@ -24,6 +24,7 @@ namespace ClinicOps.API.Controllers
         private readonly IPatientCaseQueryService _patientCaseQueryService;
         private readonly IPatientCaseCommandService _patientCaseCommandService;
         private readonly IPatientCaseLabService _patientCaseLabService;
+        private readonly IPatientCaseDentalService _patientCaseDentalService;
         private readonly IPatientCasePdfFacadeService _patientCasePdfFacadeService;
 
         public PatientCaseController(
@@ -35,6 +36,7 @@ namespace ClinicOps.API.Controllers
             IPatientCaseQueryService patientCaseQueryService,
             IPatientCaseCommandService patientCaseCommandService,
             IPatientCaseLabService patientCaseLabService,
+            IPatientCaseDentalService patientCaseDentalService,
             IPatientCasePdfFacadeService patientCasePdfFacadeService)
         {
             _env = env;
@@ -45,6 +47,7 @@ namespace ClinicOps.API.Controllers
             _patientCaseQueryService = patientCaseQueryService;
             _patientCaseCommandService = patientCaseCommandService;
             _patientCaseLabService = patientCaseLabService;
+            _patientCaseDentalService = patientCaseDentalService;
             _patientCasePdfFacadeService = patientCasePdfFacadeService;
         }
 
@@ -314,6 +317,78 @@ namespace ClinicOps.API.Controllers
             catch (UnauthorizedAccessException ex)
             {
                 return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
+        [HttpGet("{id:guid}/dental-findings")]
+        [ProducesResponseType(typeof(List<DentalFindingDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<List<DentalFindingDto>>> ListDentalFindings(Guid id)
+        {
+            var (_, clinicId) = await ResolveClinicIdAsync();
+            try
+            {
+                return Ok(await _patientCaseDentalService.ListAsync(id, clinicId));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
+        [HttpPut("{id:guid}/dental-findings")]
+        [Authorize(Roles = "Doctor,ClinicAdmin,SuperAdmin")]
+        [ProducesResponseType(typeof(DentalFindingDto), StatusCodes.Status200OK)]
+        public async Task<ActionResult<DentalFindingDto>> UpsertDentalFinding(Guid id, [FromBody] UpsertDentalFindingRequest request)
+        {
+            var (_, clinicId) = await ResolveClinicIdAsync();
+            try
+            {
+                if (User.IsInRole("Doctor"))
+                    await _patientCaseQueryService.EnsureCurrentDoctorMayAccessAsync(id, User);
+                return Ok(await _patientCaseDentalService.UpsertAsync(id, clinicId, User.GetUserId(), request));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
+        [HttpDelete("{id:guid}/dental-findings/{toothNumber:int}")]
+        [Authorize(Roles = "Doctor,ClinicAdmin,SuperAdmin")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<IActionResult> DeleteDentalFinding(Guid id, int toothNumber, [FromQuery] string dentition = "Adult")
+        {
+            var (_, clinicId) = await ResolveClinicIdAsync();
+            try
+            {
+                if (User.IsInRole("Doctor"))
+                    await _patientCaseQueryService.EnsureCurrentDoctorMayAccessAsync(id, User);
+                await _patientCaseDentalService.DeleteAsync(id, clinicId, toothNumber, dentition);
+                return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (KeyNotFoundException ex)
             {

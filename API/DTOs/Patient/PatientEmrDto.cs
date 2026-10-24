@@ -6,6 +6,7 @@ namespace ClinicOps.API.DTOs.Patient
         public Guid ClinicId { get; set; }
         public bool IsDoctorView { get; set; }
         public bool IsReadOnly { get; set; }
+        public bool IsStomatologic { get; set; }
         public string FirstName { get; set; } = null!;
         public string LastName { get; set; } = null!;
         public DateTime DateOfBirth { get; set; }
@@ -29,6 +30,8 @@ namespace ClinicOps.API.DTOs.Patient
         public string? Therapy { get; set; }
         public DateTime? ReportCreatedAt { get; set; }
         public List<PatientEmrVitalsDto> Vitals { get; set; } = new();
+        public List<ClinicOps.API.DTOs.PatientCase.DentalFindingDto> DentalFindings { get; set; } = new();
+        public bool ShowOdontogram { get; set; }
     }
 
     public class PatientEmrVitalsDto

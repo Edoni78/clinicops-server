@@ -131,6 +131,7 @@ namespace ClinicOps.Application.Services.Patient
                         activeCase.SetProtocolNumber(protocol);
                 }
                 await _db.SaveChangesAsync();
+                await CopyLatestDentalChartIfNeededAsync(clinic, patientId, activeCase.Id);
                 return activeCase;
             }
 
@@ -140,7 +141,57 @@ namespace ClinicOps.Application.Services.Patient
                 patientCase.SetProtocolNumber(nextProtocol);
             _db.PatientCases.Add(patientCase);
             await _db.SaveChangesAsync();
+            await CopyLatestDentalChartIfNeededAsync(clinic, patientId, patientCase.Id);
             return patientCase;
+        }
+
+        private async Task CopyLatestDentalChartIfNeededAsync(Clinic clinic, Guid patientId, Guid targetCaseId)
+        {
+            if (!clinic.IsStomatologic)
+                return;
+
+            var alreadyHasChart = await _db.PatientCaseDentalFindings
+                .AnyAsync(f => f.PatientCaseId == targetCaseId && f.ClinicId == clinic.Id);
+            if (alreadyHasChart)
+                return;
+
+            var sourceCaseId = await _db.PatientCases
+                .AsNoTracking()
+                .Where(pc =>
+                    pc.PatientId == patientId &&
+                    pc.ClinicId == clinic.Id &&
+                    pc.Id != targetCaseId &&
+                    _db.PatientCaseDentalFindings.Any(f => f.PatientCaseId == pc.Id && f.ClinicId == clinic.Id))
+                .OrderByDescending(pc => pc.CompletedAt ?? pc.CreatedAt)
+                .Select(pc => pc.Id)
+                .FirstOrDefaultAsync();
+
+            if (sourceCaseId == Guid.Empty)
+                return;
+
+            var previous = await _db.PatientCaseDentalFindings
+                .AsNoTracking()
+                .Where(f => f.PatientCaseId == sourceCaseId && f.ClinicId == clinic.Id)
+                .ToListAsync();
+
+            foreach (var finding in previous)
+            {
+                _db.PatientCaseDentalFindings.Add(new PatientCaseDentalFinding
+                {
+                    ClinicId = clinic.Id,
+                    PatientCaseId = targetCaseId,
+                    ToothNumber = finding.ToothNumber,
+                    Dentition = finding.Dentition,
+                    Condition = finding.Condition,
+                    Surfaces = finding.Surfaces,
+                    Treatment = finding.Treatment,
+                    Notes = finding.Notes,
+                    UpdatedAt = DateTime.UtcNow,
+                    UpdatedByUserId = finding.UpdatedByUserId
+                });
+            }
+
+            await _db.SaveChangesAsync();
         }
 
         private static PatientResponseDto BuildPatientResponse(
