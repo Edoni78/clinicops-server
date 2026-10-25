@@ -69,10 +69,10 @@ namespace ClinicOps.Application.Services.Pdf
                 PreferCSSPageSize = true,
                 MarginOptions = new MarginOptions
                 {
-                    Top = "20mm",
-                    Bottom = "20mm",
-                    Left = "20mm",
-                    Right = "20mm"
+                    Top = "12mm",
+                    Bottom = "12mm",
+                    Left = "12mm",
+                    Right = "12mm"
                 }
             });
 
@@ -83,47 +83,59 @@ namespace ClinicOps.Application.Services.Pdf
         {
             var sb = new StringBuilder();
             static string H(string? value) => System.Net.WebUtility.HtmlEncode(value ?? "");
-            var clinicName = H((m.ClinicName ?? "").ToUpperInvariant());
-            var clinicAddress = H(m.ClinicAddress ?? "—");
-            var clinicPhone = H(m.ClinicPhone ?? "—");
-            var patientFullName = H($"{m.PatientFirstName} {m.PatientLastName}");
-            var patientGender = H(FormatGenderLabel(m.PatientGender));
+            var clinicNameRaw = (m.ClinicName ?? "").Trim().ToUpperInvariant();
+            var clinicName = H(clinicNameRaw);
+            var clinicAddress = H(string.IsNullOrWhiteSpace(m.ClinicAddress) ? "—" : m.ClinicAddress);
+            var clinicPhone = H(string.IsNullOrWhiteSpace(m.ClinicPhone) ? "—" : m.ClinicPhone);
+            var patientFullName = H($"{m.PatientFirstName} {m.PatientLastName}".Trim());
             var patientDob = H(m.PatientDateOfBirth?.ToString("dd/MM/yyyy") ?? "—");
-            var patientPhone = H(m.PatientPhone ?? "—");
-            var protocolNumber = H(string.IsNullOrWhiteSpace(m.ProtocolNumber) ? "—" : m.ProtocolNumber!.Trim());
-            var doctorName = H(m.DoctorDisplayName ?? "—");
-            var doctorTitle = H(m.DoctorTitle ?? "");
-            var doctorKo = H(m.DoctorKoNumber ?? "");
-            var anamneza = H(m.MedicalReport?.Anamneza ?? "");
-            var ekzaminimi = H(m.MedicalReport?.Ekzaminimi ?? "");
-            var diagnosis = H(m.MedicalReport?.Diagnosis ?? "");
-            var therapy = H(m.MedicalReport?.Therapy ?? "");
-            var logoSrc = BuildImageUrlLikeLogo(
-                m.BaseUrl,
-                m.ClinicLogoUrl,
-                "https://via.placeholder.com/120x120?text=Logo");
-            var watermarkLogoSrc = m.ShowPdfWatermark
-                ? BuildOptionalImageUrl(m.BaseUrl, m.ClinicLogoDataUri, m.ClinicLogoUrl)
-                : null;
-            var signatureSrc = BuildImageUrlLikeLogo(
-                m.BaseUrl,
-                m.SignatureUrl,
-                "https://via.placeholder.com/220x80?text=Signature");
-            var stampSrc = BuildImageUrlLikeLogo(
-                m.BaseUrl,
-                m.StampUrl,
-                "https://via.placeholder.com/120x120?text=Stamp");
-            var hasWeight = m.LatestVitals?.WeightKg.HasValue == true;
-            var hasBp = m.LatestVitals?.SystolicPressure.HasValue == true || m.LatestVitals?.DiastolicPressure.HasValue == true;
-            var hasTemp = m.LatestVitals?.TemperatureC.HasValue == true;
-            var hasHr = m.LatestVitals?.HeartRate.HasValue == true;
-            var showVitalsSection = !m.IsStomatologic && (hasWeight || hasBp || hasTemp || hasHr);
-            var weight = hasWeight ? $"{m.LatestVitals!.WeightKg!.Value:F1} kg" : null;
-            var bp = hasBp
-                ? $"{m.LatestVitals?.SystolicPressure?.ToString() ?? "—"} / {m.LatestVitals?.DiastolicPressure?.ToString() ?? "—"} mmHg"
-                : null;
-            var temp = hasTemp ? $"{m.LatestVitals!.TemperatureC!.Value:F1} °C" : null;
-            var hr = hasHr ? $"{m.LatestVitals!.HeartRate!.Value} bpm" : null;
+            var patientPhone = (m.PatientPhone ?? "").Trim();
+            var protocol = (m.ProtocolNumber ?? "").Trim();
+            var visitDate = m.CreatedAt.ToString("dd/MM/yyyy");
+            var visitTime = m.CreatedAt.ToString("HH:mm");
+            var doctorName = H(FormatDoctorLine(m.DoctorDisplayName));
+            var doctorTitle = H((m.DoctorTitle ?? "").Trim());
+            var doctorKo = H(FormatKoLine(m.DoctorKoNumber));
+            var anamneza = H(string.IsNullOrWhiteSpace(m.MedicalReport?.Anamneza) ? "—" : m.MedicalReport!.Anamneza);
+            var ekzaminimi = H(string.IsNullOrWhiteSpace(m.MedicalReport?.Ekzaminimi) ? "—" : m.MedicalReport!.Ekzaminimi);
+            var diagnosis = H(string.IsNullOrWhiteSpace(m.MedicalReport?.Diagnosis) ? "—" : m.MedicalReport!.Diagnosis);
+            var therapy = H(string.IsNullOrWhiteSpace(m.MedicalReport?.Therapy) ? "—" : m.MedicalReport!.Therapy);
+            var logoSrc = BuildOptionalImageUrl(m.BaseUrl, m.ClinicLogoDataUri, m.ClinicLogoUrl);
+            var watermarkLogoSrc = m.ShowPdfWatermark ? logoSrc : null;
+            var signatureSrc = BuildOptionalImageUrl(m.BaseUrl, m.SignatureDataUri, m.SignatureUrl);
+            var stampSrc = BuildOptionalImageUrl(m.BaseUrl, m.StampDataUri, m.StampUrl);
+
+            var left = new List<(string Label, string Value)>
+            {
+                ("Emri", patientFullName),
+                ("Data e lindjes", patientDob)
+            };
+            if (!string.IsNullOrWhiteSpace(patientPhone))
+                left.Add(("Telefoni", H(patientPhone)));
+
+            var middle = new List<(string Label, string Value)>();
+            if (!m.IsStomatologic && m.LatestVitals != null)
+            {
+                var v = m.LatestVitals;
+                if (v.WeightKg.HasValue)
+                    middle.Add(("Pesha", H($"{v.WeightKg.Value:F1} kg")));
+                if (v.SystolicPressure.HasValue || v.DiastolicPressure.HasValue)
+                    middle.Add(("Tensioni", H($"{v.SystolicPressure?.ToString() ?? "—"} / {v.DiastolicPressure?.ToString() ?? "—"} mmHg")));
+                if (v.TemperatureC.HasValue)
+                    middle.Add(("Temperatura", H($"{v.TemperatureC.Value:F1} °C")));
+                if (v.HeartRate.HasValue)
+                    middle.Add(("Rrahjet e zemrës", H($"{v.HeartRate.Value} bpm")));
+            }
+
+            var right = new List<(string Label, string Value)>();
+            if (!string.IsNullOrWhiteSpace(protocol))
+                right.Add(("Nr. protokollit", H(protocol)));
+            right.Add(("Data e vizitës", H(visitDate)));
+            right.Add(("Ora", H(visitTime)));
+            if (!string.IsNullOrWhiteSpace(m.ServiceName))
+                right.Add(("Shërbimi", H(m.ServiceName)));
+
+            var columns = new[] { left, middle, right }.Where(c => c.Count > 0).ToList();
 
             sb.Append("<!DOCTYPE html><html><head><meta charset='utf-8'>");
             if (!string.IsNullOrEmpty(m.BaseUrl))
@@ -131,117 +143,124 @@ namespace ClinicOps.Application.Services.Pdf
                 var baseHref = m.BaseUrl.TrimEnd('/') + "/";
                 sb.Append("<base href=\"").Append(System.Net.WebUtility.HtmlEncode(baseHref)).Append("\">");
             }
-            sb.Append("<style>@page{size:A4;margin:20mm;} body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#262626;} #clinic-case-report{width:170mm;max-width:170mm;margin:0 auto;background:#ffffff;} *{box-sizing:border-box;} .clinical-note-text{white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;line-height:1.5;} .report-footer{position:fixed;left:0;right:0;bottom:0;width:100%;box-sizing:border-box;margin-top:10px;padding-top:6px;border-top:1px solid #cbd5e1;font-size:10px;color:#64748b;display:flex;justify-content:space-between;gap:8px;align-items:center;background:#fff;}</style></head><body>");
+            sb.Append("<style>");
+            sb.Append("@page{size:A4;margin:12mm;}");
+            sb.Append("*{box-sizing:border-box;}");
+            sb.Append("body{margin:0;padding:0;font-family:Helvetica,Arial,sans-serif;color:#000;background:#fff;}");
+            sb.Append(".wm{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:0;pointer-events:none;}");
+            sb.Append(".wm img{width:75%;max-width:none;height:auto;opacity:0.08;margin-top:-9%;}");
+            sb.Append(".content{position:relative;z-index:1;padding-bottom:10mm;}");
+            sb.Append(".header{display:flex;align-items:center;gap:8px;}");
+            sb.Append(".header img{max-width:20mm;max-height:20mm;object-fit:contain;display:block;}");
+            sb.Append(".clinic-name{margin:0;font-size:15pt;font-weight:700;color:#0f172a;text-transform:uppercase;line-height:1.15;}");
+            sb.Append(".clinic-meta{margin:1px 0 0;font-size:8pt;color:#000;line-height:1.35;}");
+            sb.Append(".rule{border:0;border-top:0.7pt solid #000;margin:3mm 0 5mm;}");
+            sb.Append(".doc-title{text-align:center;font-size:13pt;font-weight:700;color:#0f172a;margin:0 0 4mm;}");
+            sb.Append(".sec-h{background:#f8fafc;border:0.7pt solid #000;border-bottom:0;padding:1.6mm 2.2mm;font-size:10pt;color:#000;}");
+            sb.Append(".grid{width:100%;border-collapse:collapse;border:0.7pt solid #000;margin:0 0 3.5mm;table-layout:fixed;}");
+            sb.Append(".grid td{border-left:0.7pt solid #000;border-top:0.7pt solid #000;padding:1.8mm 2.4mm;vertical-align:middle;font-size:9pt;}");
+            sb.Append(".grid tr:first-child td{border-top:0;}");
+            sb.Append(".grid td:first-child{border-left:0;}");
+            sb.Append(".pair-l{font-weight:400;} .pair-v{font-weight:700;}");
+            sb.Append(".notes{border:0.7pt solid #000;margin:0 0 3.5mm;}");
+            sb.Append(".notes-body{padding:2.2mm 2.6mm 1.6mm;}");
+            sb.Append(".field-l{font-size:9pt;font-weight:700;margin:0 0 0.8mm;}");
+            sb.Append(".field-t{font-size:9pt;white-space:pre-wrap;word-wrap:break-word;margin:0 0 1.2mm;line-height:1.4;}");
+            sb.Append(".div{border-top:0.7pt solid #000;margin:1.2mm 0;}");
+            sb.Append(".signoff{display:table;width:100%;margin-top:4mm;page-break-inside:avoid;}");
+            sb.Append(".signoff .c{display:table-cell;width:50%;vertical-align:bottom;}");
+            sb.Append(".signoff .name{font-size:9pt;font-weight:700;color:#0f172a;}");
+            sb.Append(".signoff .meta{font-size:8pt;margin-top:0.8mm;}");
+            sb.Append(".signoff .sig{max-width:46mm;max-height:10mm;margin-top:1.4mm;display:block;}");
+            sb.Append(".signoff .stamp{max-width:22mm;max-height:16mm;display:block;}");
+            sb.Append(".signoff .line{border-top:0.7pt solid #000;width:62mm;margin-top:2mm;padding-top:1mm;font-size:8pt;}");
+            sb.Append(".footer{position:fixed;left:0;right:0;bottom:0;font-size:8pt;color:#000;border-top:0.7pt solid #000;padding-top:1.2mm;display:flex;justify-content:space-between;gap:4mm;background:#fff;}");
+            sb.Append("</style></head><body>");
 
-            sb.Append("<div id='clinic-case-report' style='position:relative; width:194mm; margin:0 auto; background:#ffffff; color:#1e293b; font-family:Arial, sans-serif; box-sizing:border-box; padding:14px 16px 10px 16px; line-height:1.35;'>");
             if (!string.IsNullOrWhiteSpace(watermarkLogoSrc))
             {
-                sb.Append("<div aria-hidden='true' style='position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:0; pointer-events:none;'>");
-                sb.Append("<img src='").Append(watermarkLogoSrc).Append("' alt='' style='width:150%; max-width:none; height:auto; object-fit:contain; opacity:0.08;'/>");
-                sb.Append("</div>");
+                sb.Append("<div class='wm' aria-hidden='true'><img src='").Append(watermarkLogoSrc).Append("' alt=''/></div>");
             }
-            sb.Append("<div style='position:relative; z-index:1; padding-bottom:12mm;'>");
-            sb.Append("<div style='border-bottom:1px solid #d6d6d6; padding-bottom:10px; margin-bottom:10px;'>");
-            sb.Append("<div style='display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap;'>");
-            sb.Append("<div style='display:flex; align-items:center; gap:10px; flex:1; min-width:200px;'>");
-            sb.Append("<div style='width:76px; height:76px; flex-shrink:0;'>");
-            sb.Append("<img src='").Append(logoSrc).Append("' alt='Clinic Logo' style='width:100%; height:100%; object-fit:contain; display:block;'/>");
-            sb.Append("</div>");
-            sb.Append("<div style='min-width:0;'>");
-            sb.Append("<h1 style='margin:0 0 4px 0; font-size:20px; color:#0f172a; line-height:1.2;'>").Append(clinicName).Append("</h1>");
-            sb.Append("<p style='margin:0 0 2px 0; font-size:11px; color:#64748b; line-height:1.35;'>");
-            sb.Append("<span style='color:#94a3b8;'>Adresa:</span> ").Append(clinicAddress);
-            sb.Append("</p>");
-            sb.Append("<p style='margin:0; font-size:11px; color:#64748b; line-height:1.35;'>");
-            sb.Append("<span style='color:#94a3b8;'>Tel:</span> ").Append(clinicPhone);
-            sb.Append("</p>");
-            sb.Append("</div></div></div>");
-            sb.Append("<div style='text-align:center; margin-top:8px;'>");
-            sb.Append("<h2 style='margin:0; font-size:17px; color:#0f172a; letter-spacing:0.2px;'>RAPORT SPECIALISTIK</h2>");
-            // sb.Append("<p style='margin:3px 0 0 0; font-size:10px; color:#64748b;'>Dokument zyrtar i konsultës dhe gjetjeve mjekësore</p>");
-            sb.Append("</div></div>");
 
-            sb.Append("<div style='border:1px solid #e2e8f0; overflow:hidden; margin-bottom:10px;'>");
-            sb.Append("<div style='background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:8px 12px; font-size:13px; color:#0f172a;'>Të dhënat e pacientit</div>");
-            sb.Append("<div style='padding:0;'>");
-            sb.Append("<div style='display:flex; justify-content:space-between; gap:12px; padding:7px 12px; border-bottom:1px solid #e2e8f0;'><span style='font-size:12px; color:#64748b;'>Emri i pacientit</span><span style='font-size:12px; color:#0f172a;'>").Append(patientFullName).Append("</span></div>");
-            sb.Append("<div style='display:flex; justify-content:space-between; gap:12px; padding:7px 12px; border-bottom:1px solid #e2e8f0;'><span style='font-size:12px; color:#64748b;'>Gjinia</span><span style='font-size:12px; color:#0f172a;'>").Append(patientGender).Append("</span></div>");
-            sb.Append("<div style='display:flex; justify-content:space-between; gap:12px; padding:7px 12px; border-bottom:1px solid #e2e8f0;'><span style='font-size:12px; color:#64748b;'>Data e lindjes</span><span style='font-size:12px; color:#0f172a;'>").Append(patientDob).Append("</span></div>");
-            sb.Append("<div style='display:flex; justify-content:space-between; gap:12px; padding:7px 12px; border-bottom:1px solid #e2e8f0;'><span style='font-size:12px; color:#64748b;'>Telefoni</span><span style='font-size:12px; color:#0f172a;'>").Append(patientPhone).Append("</span></div>");
-            if (!string.IsNullOrWhiteSpace(m.ProtocolNumber))
-                sb.Append("<div style='display:flex; justify-content:space-between; gap:12px; padding:7px 12px; border-bottom:1px solid #e2e8f0;'><span style='font-size:12px; color:#64748b;'>Nr. protokollit</span><span style='font-size:12px; color:#0f172a; font-weight:600;'>").Append(protocolNumber).Append("</span></div>");
-            // sb.Append("<div style='display:flex; justify-content:space-between; gap:12px; padding:7px 12px;'><span style='font-size:12px; color:#64748b;'>Statusi i rastit</span><span style='font-size:12px; color:#0f172a;'>").Append(caseStatus).Append("</span></div>");
+            sb.Append("<div class='content'>");
+            sb.Append("<div class='header'>");
+            if (!string.IsNullOrWhiteSpace(logoSrc))
+                sb.Append("<img src='").Append(logoSrc).Append("' alt=''/>");
+            sb.Append("<div>");
+            if (!string.IsNullOrWhiteSpace(clinicNameRaw))
+                sb.Append("<p class='clinic-name'>").Append(clinicName).Append("</p>");
+            sb.Append("<p class='clinic-meta'>Adresa: ").Append(clinicAddress).Append("</p>");
+            sb.Append("<p class='clinic-meta'>Tel: ").Append(clinicPhone).Append("</p>");
             sb.Append("</div></div>");
+            sb.Append("<hr class='rule'/>");
+            sb.Append("<p class='doc-title'>RAPORT SPECIALISTIK</p>");
 
-            if (showVitalsSection)
+            sb.Append("<div class='sec-h'>Të dhënat e pacientit</div>");
+            var rows = columns.Count == 0 ? 1 : columns.Max(c => c.Count);
+            sb.Append("<table class='grid'><tbody>");
+            for (var r = 0; r < rows; r++)
             {
-                sb.Append("<div style='border:1px solid #e2e8f0; overflow:hidden; margin-bottom:10px;'>");
-                sb.Append("<div style='background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:8px 12px; font-size:13px; color:#0f172a;'>Shenjat vitale</div>");
-                sb.Append("<div style='padding:10px;'><div style='display:grid; grid-template-columns:repeat(2, 1fr); gap:8px;'>");
-                if (hasWeight)
-                    sb.Append("<div style='border:1px solid #e2e8f0; padding:8px;'><div style='font-size:11px; color:#64748b;'>Pesha</div><div style='font-size:12px; color:#0f172a; margin-top:2px;'>").Append(H(weight!)).Append("</div></div>");
-                if (hasBp)
-                    sb.Append("<div style='border:1px solid #e2e8f0; padding:8px;'><div style='font-size:11px; color:#64748b;'>Tensioni</div><div style='font-size:12px; color:#0f172a; margin-top:2px;'>").Append(H(bp!)).Append("</div></div>");
-                if (hasTemp)
-                    sb.Append("<div style='border:1px solid #e2e8f0; padding:8px;'><div style='font-size:11px; color:#64748b;'>Temperatura</div><div style='font-size:12px; color:#0f172a; margin-top:2px;'>").Append(H(temp!)).Append("</div></div>");
-                if (hasHr)
-                    sb.Append("<div style='border:1px solid #e2e8f0; padding:8px;'><div style='font-size:11px; color:#64748b;'>Rrahjet e zemrës</div><div style='font-size:12px; color:#0f172a; margin-top:2px;'>").Append(H(hr!)).Append("</div></div>");
-                sb.Append("</div></div></div>");
+                sb.Append("<tr>");
+                foreach (var col in columns)
+                {
+                    sb.Append("<td>");
+                    if (r < col.Count)
+                    {
+                        sb.Append("<span class='pair-l'>").Append(H(col[r].Label)).Append(" :</span> ");
+                        sb.Append("<span class='pair-v'>").Append(col[r].Value).Append("</span>");
+                    }
+                    sb.Append("</td>");
+                }
+                sb.Append("</tr>");
             }
+            sb.Append("</tbody></table>");
 
             if (m.IsStomatologic)
                 AppendOdontogramHtml(sb, m.DentalFindings, H);
 
-            sb.Append("<div style='border:1px solid #e2e8f0; margin-bottom:10px; page-break-inside:avoid;'>");
-            sb.Append("<div style='background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:9px 12px; font-size:13px; color:#0f172a;'>Shënime klinike</div>");
-            sb.Append("<div style='padding:12px 14px;'>");
-            sb.Append("<div style='margin-bottom:12px;'><div style='font-size:12px; color:#64748b; margin-bottom:5px; font-weight:600;'>Anamneza</div><div class='clinical-note-text' style='font-size:12px; color:#0f172a;'>").Append(string.IsNullOrWhiteSpace(anamneza) ? "—" : anamneza).Append("</div></div>");
-            sb.Append("<div style='margin-bottom:12px;'><div style='font-size:12px; color:#64748b; margin-bottom:5px; font-weight:600;'>Ekzaminimi</div><div class='clinical-note-text' style='font-size:12px; color:#0f172a;'>").Append(string.IsNullOrWhiteSpace(ekzaminimi) ? "—" : ekzaminimi).Append("</div></div>");
-            sb.Append("<div style='margin-bottom:12px;'><div style='font-size:12px; color:#64748b; margin-bottom:5px; font-weight:600;'>Diagnoza</div><div class='clinical-note-text' style='font-size:12px; color:#0f172a;'>").Append(diagnosis).Append("</div></div>");
-            sb.Append("<div><div style='font-size:12px; color:#64748b; margin-bottom:5px; font-weight:600;'>Terapia / Rekomandimi</div><div class='clinical-note-text' style='font-size:12px; color:#0f172a;'>").Append(therapy).Append("</div></div>");
+            sb.Append("<div class='sec-h'>Shënime klinike</div>");
+            sb.Append("<div class='notes'><div class='notes-body'>");
+            void Field(string label, string value, bool last)
+            {
+                sb.Append("<p class='field-l'>").Append(H(label)).Append("</p>");
+                sb.Append("<p class='field-t'>").Append(value).Append("</p>");
+                if (!last) sb.Append("<div class='div'></div>");
+            }
+            Field("Anamneza", anamneza, false);
+            Field("Ekzaminimi", ekzaminimi, false);
+            Field("Diagnoza", diagnosis, false);
+            var labNames = m.LabFileNames?.Where(n => !string.IsNullOrWhiteSpace(n)).ToList() ?? new List<string>();
+            Field("Terapia / Rekomandimi", therapy, labNames.Count == 0);
+            if (labNames.Count > 0)
+            {
+                var labText = H(string.Join("\n", labNames.Select(n => $"- {n}")));
+                Field("Laboratori", labText, true);
+            }
             sb.Append("</div></div>");
 
-            var hasSignature = !string.IsNullOrWhiteSpace(m.SignatureUrl);
-            var hasStamp = !string.IsNullOrWhiteSpace(m.StampUrl);
-            sb.Append("<div style='margin-top:18px; padding-top:8px; page-break-inside:avoid;'>");
-            sb.Append("<div style='display:grid; grid-template-columns:1fr 1fr; gap:28px; align-items:end;'>");
-            sb.Append("<div>");
-            sb.Append("<div style='font-size:11px; color:#787878;'>Mjeku përgjegjës</div>");
-            sb.Append("<div style='margin-top:4px; font-size:12px; font-weight:700; color:#262626;'>").Append(doctorName).Append("</div>");
+            sb.Append("<div class='signoff'>");
+            sb.Append("<div class='c'>");
+            sb.Append("<div class='name'>").Append(doctorName).Append("</div>");
             if (!string.IsNullOrWhiteSpace(m.DoctorTitle))
-                sb.Append("<div style='margin-top:2px; font-size:11px; color:#525252;'>").Append(doctorTitle).Append("</div>");
-            if (!string.IsNullOrWhiteSpace(m.DoctorKoNumber))
-                sb.Append("<div style='margin-top:2px; font-size:11px; color:#525252;'>KO: ").Append(doctorKo).Append("</div>");
-            if (hasSignature)
-            {
-                sb.Append("<div style='height:42px; margin-top:6px; display:flex; align-items:flex-end;'>");
-                sb.Append("<img src='").Append(signatureSrc).Append("' alt='Nënshkrimi' style='max-width:160px; max-height:42px; object-fit:contain; display:block;'/>");
-                sb.Append("</div>");
-            }
-            sb.Append("<div style='margin-top:8px; border-top:1px solid #464646; width:68mm;'></div>");
-            sb.Append("<div style='margin-top:4px; font-size:11px; color:#787878;'>Nënshkrimi</div>");
-            sb.Append("</div>");
-            sb.Append("<div>");
-            if (hasStamp)
-            {
-                sb.Append("<div style='height:72px; display:flex; align-items:flex-end;'>");
-                sb.Append("<img src='").Append(stampSrc).Append("' alt='Vula' style='max-width:90px; max-height:72px; object-fit:contain; display:block;'/>");
-                sb.Append("</div>");
-            }
-            sb.Append("<div style='margin-top:8px; border-top:1px solid #464646; width:68mm;'></div>");
-            sb.Append("<div style='margin-top:4px; font-size:11px; color:#787878;'>Vula</div>");
-            sb.Append("</div></div></div>");
-            sb.Append("<div class='report-footer'>");
-            sb.Append("<span>").Append(clinicName).Append(" · Dokument zyrtar mjekësor");
-            if (!string.IsNullOrWhiteSpace(m.ProtocolNumber))
-                sb.Append(" · Nr. protokollit: ").Append(protocolNumber);
-            sb.Append("</span>");
-            sb.Append("<span>").Append(clinicAddress).Append(" · Tel: ").Append(clinicPhone).Append("</span>");
-            sb.Append("</div>");
+                sb.Append("<div class='meta'>").Append(doctorTitle).Append("</div>");
+            if (!string.IsNullOrWhiteSpace(doctorKo))
+                sb.Append("<div class='meta'>").Append(doctorKo).Append("</div>");
+            if (!string.IsNullOrWhiteSpace(signatureSrc))
+                sb.Append("<img class='sig' src='").Append(signatureSrc).Append("' alt=''/>");
+            sb.Append("<div class='line'>Nënshkrimi</div>");
+            sb.Append("</div><div class='c'>");
+            if (!string.IsNullOrWhiteSpace(stampSrc))
+                sb.Append("<img class='stamp' src='").Append(stampSrc).Append("' alt=''/>");
+            sb.Append("<div class='line'>Vula</div>");
+            sb.Append("</div></div>");
 
-            sb.Append("</div>");
+            sb.Append("<div class='footer'><span>");
+            sb.Append(clinicName);
+            if (!string.IsNullOrWhiteSpace(protocol))
+                sb.Append(" · Nr. protokollit: ").Append(H(protocol));
+            sb.Append("</span><span>").Append(clinicAddress).Append(" · Tel: ").Append(clinicPhone).Append("</span></div>");
+
             sb.Append("</div></body></html>");
-
             return sb.ToString();
         }
 
@@ -291,9 +310,8 @@ namespace ClinicOps.Application.Services.Pdf
             List<DentalFindingPdfModel> findings,
             Func<string?, string> H)
         {
-            sb.Append("<div style='border:1px solid #e2e8f0; overflow:hidden; margin-bottom:10px; page-break-inside:avoid;'>");
-            sb.Append("<div style='background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:8px 12px; font-size:13px; color:#0f172a;'>Odontograma</div>");
-            sb.Append("<div style='padding:10px 12px;'>");
+            sb.Append("<div class='sec-h'>Odontograma</div>");
+            sb.Append("<div class='notes' style='margin-bottom:3.5mm;'><div class='notes-body'>");
 
             var adult = findings.Where(f => !string.Equals(f.Dentition, "Kids", StringComparison.OrdinalIgnoreCase)).ToList();
             var kids = findings.Where(f => string.Equals(f.Dentition, "Kids", StringComparison.OrdinalIgnoreCase)).ToList();
@@ -307,7 +325,7 @@ namespace ClinicOps.Application.Services.Pdf
                     new[] { 85, 84, 83, 82, 81, 71, 72, 73, 74, 75 },
                     kids);
 
-            sb.Append("<div style='display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; font-size:9px; color:#64748b;'>");
+            sb.Append("<div style='display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; font-size:8pt; color:#000;'>");
             sb.Append("<span><span style='display:inline-block;width:8px;height:8px;background:#ef4444;border-radius:99px;margin-right:4px;'></span>Karies</span>");
             sb.Append("<span><span style='display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:99px;margin-right:4px;'></span>Mbushje</span>");
             sb.Append("<span><span style='display:inline-block;width:8px;height:8px;background:#d97706;border-radius:99px;margin-right:4px;'></span>Kurorë</span>");
@@ -325,7 +343,7 @@ namespace ClinicOps.Application.Services.Pdf
                     if (!string.IsNullOrWhiteSpace(finding.Surfaces)) line += $" · {finding.Surfaces}";
                     if (!string.IsNullOrWhiteSpace(finding.Treatment)) line += $" · {finding.Treatment}";
                     if (!string.IsNullOrWhiteSpace(finding.Notes)) line += $" — {finding.Notes}";
-                    sb.Append("<div style='padding:4px 0; border-top:1px solid #e2e8f0; font-size:11px; color:#0f172a;'>").Append(H(line)).Append("</div>");
+                    sb.Append("<div style='padding:4px 0; border-top:0.7pt solid #000; font-size:9pt;'>").Append(H(line)).Append("</div>");
                 }
                 sb.Append("</div>");
             }
@@ -339,7 +357,7 @@ namespace ClinicOps.Application.Services.Pdf
                 .GroupBy(f => f.ToothNumber)
                 .ToDictionary(g => g.Key, g => g.First());
             sb.Append("<div style='margin-bottom:8px;'>");
-            sb.Append("<div style='font-size:10px; color:#64748b; text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px;'>").Append(title).Append("</div>");
+            sb.Append("<div style='font-size:8pt; text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px;'>").Append(title).Append("</div>");
             AppendToothRow(sb, upper, byTooth);
             sb.Append("<div style='height:6px;'></div>");
             AppendToothRow(sb, lower, byTooth);
@@ -357,7 +375,7 @@ namespace ClinicOps.Application.Services.Pdf
                 var fg = condition is "Healthy" or "Missing" ? "#334155" : "#fff";
                 var mark = condition is "Extraction" or "Missing" ? "×" : n.ToString();
                 sb.Append("<div style='width:18px; text-align:center;'>");
-                sb.Append("<div style='height:26px; border:1px solid #cbd5e1; border-radius:3px; background:").Append(bg)
+                sb.Append("<div style='height:26px; border:0.7pt solid #000; background:").Append(bg)
                     .Append("; color:").Append(fg).Append("; font-size:8px; font-weight:700; line-height:26px;'>").Append(mark).Append("</div>");
                 sb.Append("</div>");
             }
@@ -389,12 +407,20 @@ namespace ClinicOps.Application.Services.Pdf
             _ => condition ?? ""
         };
 
-        private static string FormatGenderLabel(string? gender)
+        private static string FormatDoctorLine(string? name)
         {
-            var g = (gender ?? "").Trim().ToLowerInvariant();
-            if (g is "male" or "mashkull") return "Mashkull";
-            if (g is "female" or "femer" or "femër") return "Femër";
-            return string.IsNullOrWhiteSpace(gender) ? "—" : gender.Trim();
+            var text = (name ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(text)) return "—";
+            if (text.StartsWith("Dr", StringComparison.OrdinalIgnoreCase)) return text;
+            return $"Dr. {text}";
+        }
+
+        private static string FormatKoLine(string? value)
+        {
+            var text = (value ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(text)) return "";
+            var rest = System.Text.RegularExpressions.Regex.Replace(text, @"^ko[\s.\-:]*", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
+            return string.IsNullOrWhiteSpace(rest) ? "" : $"KO-{rest}";
         }
 
     }

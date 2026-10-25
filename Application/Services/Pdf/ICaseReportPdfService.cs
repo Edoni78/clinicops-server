@@ -25,6 +25,8 @@ namespace ClinicOps.Application.Services.Pdf
         public string? ProtocolNumber { get; set; }
         public DateTime CreatedAt { get; set; }
         public string? Notes { get; set; }
+        public string? ServiceName { get; set; }
+        public List<string> LabFileNames { get; set; } = new();
         public VitalsModel? LatestVitals { get; set; }
         public MedicalReportModel? MedicalReport { get; set; }
         public bool IsStomatologic { get; set; }

@@ -28,6 +28,7 @@ namespace ClinicOps.Application.Services.Patient
             var @case = await _db.PatientCases
                 .Include(pc => pc.Patient)
                 .Include(pc => pc.Clinic)
+                .Include(pc => pc.Service)
                 .FirstOrDefaultAsync(pc => pc.Id == caseId && pc.ClinicId == clinicId);
 
             if (@case == null)
@@ -77,6 +78,11 @@ namespace ClinicOps.Application.Services.Patient
             if (stampBytes == null && !string.IsNullOrWhiteSpace(stampUrl))
                 stampBytes = await TryDownloadImageBytesAsync(baseUrl, stampUrl);
 
+            var labResults = await _db.LabResults
+                .Where(l => l.PatientCaseId == caseId)
+                .OrderBy(l => l.UploadedAt)
+                .ToListAsync();
+
             var model = new PatientCaseReportModel
             {
                 ClinicName = @case.Clinic?.Name ?? "",
@@ -94,6 +100,10 @@ namespace ClinicOps.Application.Services.Patient
                 ProtocolNumber = @case.ProtocolNumber,
                 CreatedAt = @case.CreatedAt,
                 Notes = @case.Notes,
+                ServiceName = @case.Service?.Name,
+                LabFileNames = isStomatologic
+                    ? new List<string>()
+                    : labResults.Select(l => l.FileName).Where(n => !string.IsNullOrWhiteSpace(n)).ToList(),
                 LatestVitals = isStomatologic || latestVitals == null ? null : new VitalsModel
                 {
                     WeightKg = latestVitals!.WeightKg,
@@ -142,10 +152,6 @@ namespace ClinicOps.Application.Services.Patient
 
             var pdfBytes = await _pdfService.GenerateCaseReportPdfAsync(model);
 
-            var labResults = await _db.LabResults
-                .Where(l => l.PatientCaseId == caseId)
-                .OrderBy(l => l.UploadedAt)
-                .ToListAsync();
             if (!isSoloDoctor && !isStomatologic && labResults.Count > 0)
                 pdfBytes = MergeReportWithLabPdfs(pdfBytes, labResults);
 

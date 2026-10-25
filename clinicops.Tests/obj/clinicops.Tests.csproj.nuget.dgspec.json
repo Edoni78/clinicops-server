@@ -10,7 +10,7 @@
         "projectUniqueName": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\clinicops.csproj",
         "projectName": "clinicops",
         "projectPath": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\clinicops.csproj",
-        "packagesPath": "C:\\Users\\Admin\\AppData\\Local\\Temp\\cursor-sandbox-cache\\234d7e31d57d1102f49e6d160b5a7f65\\nuget",
+        "packagesPath": "C:\\Users\\Admin\\AppData\\Local\\Temp\\cursor-sandbox-cache\\7c52c0c886e808541e7559dd2b2d9fda\\nuget",
         "outputPath": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
@@ -123,7 +123,7 @@
         "projectUniqueName": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\clinicops.Tests\\clinicops.Tests.csproj",
         "projectName": "clinicops.Tests",
         "projectPath": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\clinicops.Tests\\clinicops.Tests.csproj",
-        "packagesPath": "C:\\Users\\Admin\\AppData\\Local\\Temp\\cursor-sandbox-cache\\234d7e31d57d1102f49e6d160b5a7f65\\nuget",
+        "packagesPath": "C:\\Users\\Admin\\AppData\\Local\\Temp\\cursor-sandbox-cache\\7c52c0c886e808541e7559dd2b2d9fda\\nuget",
         "outputPath": "C:\\Users\\Admin\\Desktop\\ClinicOps\\clinicops-server\\clinicops\\clinicops.Tests\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
